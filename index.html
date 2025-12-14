@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>酸民走開｜社群媒體鍵盤大戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <!-- Firebase SDKs for Persistence -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+    
+    <script defer>
+        // ----------------------------------------------------------------------
+        // API Key 設定 (改為變數，等待使用者輸入)
+        // ----------------------------------------------------------------------
+        let apiKey = ""; 
+        
+        // ----------------------------------------------------------------------
+        // Firebase 設定與初始化邏輯
+        // ----------------------------------------------------------------------
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+            firebase.firestore.setLogLevel('Debug');
+        }
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let firebaseConfig = {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        try {
+            const configString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+            firebaseConfig = JSON.parse(configString);
+        } catch (e) {
+            console.error("Failed to parse firebase config:", e);
+        }
+        
+        window.db = null;
+        window.auth = null;
+        window.userId = 'Loading...'; 
+        
+        window.firebaseSetup = async () => {
+            if (typeof firebase === 'undefined' || typeof firebase.initializeApp === 'undefined') {
+                window.userId = 'SDK Error';
+                updateUserDisplay();
+                return;
+            }
+
+            try {
+                if (Object.keys(firebaseConfig).length === 0) {
+                    window.userId = 'Anonymous (No DB)';
+                    updateUserDisplay();
+                    return;
+                }
+                
+                const app = firebase.initializeApp(firebaseConfig);
+                window.db = firebase.firestore(app);
+                window.auth = firebase.auth(app);
+
+                firebase.auth(app).onAuthStateChanged(async (user) => {
+                    if (user) {
+                        window.userId = user.uid;
+                    } else {
+                        try {
+                            if (initialAuthToken) {
+                                const userCredential = await firebase.auth(app).signInWithCustomToken(initialAuthToken);
+                                window.userId = userCredential.user.uid;
+                            } else {
+                                const userCredential = await firebase.auth(app).signInAnonymously();
+                                window.userId = userCredential.user.uid;
+                            }
+                        } catch (error) {
+                            window.userId = 'Auth Failed';
+                        }
+                    }
+                    updateUserDisplay();
+                });
+            } catch (setupError) {
+                window.userId = 'Setup Failed';
+                updateUserDisplay();
+            }
+        };
+
+        function updateUserDisplay() {
+            const idDisplayEl = document.getElementById('user-id-display');
+            if(idDisplayEl) { idDisplayEl.textContent = `使用者 ID: ${window.userId}`; }
+        }
+
+        window.firebaseSetup();
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Noto+Sans+TC:wght@300;500;700&display=swap');
+        
+        /* 基礎樣式 - 更加柔和協調 */
+        body {
+            font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+            background-color: #121218; 
+            color: #e4e4e7;
+            /* 柔和的背景光暈 */
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15), transparent 25%);
+            background-attachment: fixed;
+        }
+        
+        .arena-bg {
+            background: rgba(30, 30, 40, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* 卡片樣式：圓潤、柔和陰影 */
+        .card {
+            background-color: rgba(40, 40, 55, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 1rem; /* 柔和圓角 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 按鈕樣式：圓潤、漸層 */
+        .soft-btn {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            color: #064e3b;
+            font-weight: 700;
+            border-radius: 0.75rem; 
+            border: none;
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+        }
+        .soft-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(16, 185, 129, 0.4);
+            filter: brightness(1.1);
+        }
+        .soft-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.8);
+        }
+        
+        .soft-btn-secondary {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);
+        }
+        .soft-btn-secondary:hover:not(:disabled) {
+            box-shadow: 0 8px 12px rgba(79, 70, 229, 0.4);
+        }
+
+        .soft-btn-danger {
+            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
+        }
+        
+        .soft-btn-difficulty {
+            background: rgba(60, 60, 70, 0.5);
+            border: 2px solid transparent;
+        }
+        .soft-btn-difficulty.selected {
+            background: rgba(79, 70, 229, 0.3);
+            border-color: #6366f1;
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
+        }
+
+        /* 說明與音樂按鈕 */
+        .util-btn {
+            border-radius: 50%;
+            width: 3rem;
+            height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .util-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* 動畫 */
+        .character-enter {
+            animation: floatUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .emoji-icon {
+            display: inline-block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        
+        .dialog-bubble {
+            transform: scale(0.95);
+            opacity: 0;
+            animation: softPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            border-radius: 1rem;
+            border-bottom-left-radius: 0.2rem;
+        }
+        @keyframes softPop {
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes floatUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stage-transition {
+            animation: floatUp 0.6s ease-out forwards;
+        }
+
+        /* 辯論紀錄 */
+        .log-entry-user { animation: slideLeft 0.4s ease-out forwards; }
+        .log-entry-boss { animation: slideRight 0.4s ease-out forwards; }
+        @keyframes slideLeft { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes slideRight { from { opacity:0; transform:translateX(10px); } to { opacity:1; transform:translateX(0); } }
+
+        /* 士氣條 */
+        #boss-morale-bar-fill {
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .strike-through {
+            text-decoration: line-through;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: #1e1e26;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            max-width: 90%; width: 650px;
+            max-height: 85vh; overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        strong {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+        
+        /* 滾動條美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Loading Spinner Animation */
+        .loader {
+            border-top-color: transparent;
+            animation: spinner 0.8s linear infinite;
+        }
+
+        @keyframes spinner {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Glossary term style */
+        .glossary-term {
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none; /* remove underline by default */
+        }
+        .glossary-term:hover {
+            filter: brightness(1.2);
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-6 flex items-center justify-center">
+
+    <div id="game-container" class="w-full max-w-5xl arena-bg rounded-3xl shadow-2xl p-6 md:p-10 border-t-4 border-emerald-400">
+        
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-center relative border-b border-gray-700/50 pb-6">
+            <div class="text-center md:text-left">
+                <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 tracking-tight mb-2">
+                    <span class="emoji-icon">🧠</span> 鍵盤大戰 <span class="text-gray-500 font-light text-2xl mx-2">|</span> 酸民走開
+                </h1>
+                <p id="current-stage-display" class="text-sm font-medium text-gray-400 tracking-wider">系統準備就緒</p>
+                <p id="user-id-display" class="text-xs text-gray-600 mt-1 font-mono">ID: ...</p>
+            </div>
+
+            <!-- Tools -->
+            <div class="flex space-x-3 mt-4 md:mt-0">
+                <button id="bgm-toggle" class="util-btn bg-gray-700 text-pink-400 hover:bg-gray-600 hover:text-pink-300" aria-label="Toggle BGM">
+                    ♫
+                </button>
+                <button id="instructions-button" class="util-btn bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/30" aria-label="Instructions">
+                    ❔
+                </button>
+            </div>
+        </header>
+
+        <!-- Error Alert -->
+        <div id="error-state" class="hidden card p-4 mb-6 text-red-300 border-red-500/50 border bg-red-900/10 flex items-center rounded-xl">
+            <span class="text-2xl mr-3">⚠️</span>
+            <div>
+                <p class="font-bold">連線中斷</p>
+                <p id="error-message-detail" class="text-sm opacity-80">請檢查網路或 API 設定。</p>
+            </div>
+        </div>
+
+        <!-- Sticky Scenario (Persistent) -->
+        <div id="scenario-display-container" class="hidden mb-8 transition-all duration-500">
+            <div class="card p-5 border-l-4 border-emerald-500 bg-gray-800/40 backdrop-blur-sm rounded-xl">
+                <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center tracking-wider uppercase">
+                    <span class="mr-2">📄</span> Target Post (原貼文)
+                </h3>
+                <div id="scenario-content-display" class="p-4 rounded-lg bg-gray-900/50 border border-gray-700/50 max-h-48 overflow-y-auto text-base text-gray-200 leading-relaxed font-light">
+                    <!-- Content injected -->
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Game Content Area -->
+        <div id="game-content" class="min-h-[400px]">
+            
+            <!-- Stage 0: Setup -->
+            <div id="stage-0" class="space-y-6"></div>
+
+            <!-- Stage 1: Logic Analysis -->
+            <div id="stage-1" class="hidden"></div>
+
+            <!-- Stage 2: Role Simulation -->
+            <div id="stage-2" class="hidden"></div>
+
+            <!-- Stage 3: Community Observation -->
+            <div id="stage-3" class="hidden"></div>
+
+            <!-- Stage 4: Boss Battle -->
+            <div id="stage-4" class="hidden"></div>
+
+            <!-- Stage 5: Evaluation -->
+            <div id="stage-5" class="hidden"></div>
+
+            <!-- Loading - 加了轉圈圈 -->
+            <div id="loading-state" class="hidden flex flex-col items-center justify-center h-64 py-12">
+                <div class="relative w-16 h-16 mb-6">
+                    <div class="w-full h-full border-4 border-emerald-500/30 rounded-full"></div>
+                    <div class="absolute top-0 left-0 w-full h-full border-4 border-emerald-500 rounded-full loader border-t-transparent"></div>
+                </div>
+                <p id="loading-message" class="text-emerald-400 font-medium tracking-widest animate-pulse">AI 正在運算中...</p>
+            </div>
+            
+        </div>
+
+    </div>
+    
+    <!-- Modal -->
+    <div id="modal-container"></div>
+
+    <script defer>
+        // ----------------------------------------------------
+        // 1. Config & Difficulty Settings
+        // ----------------------------------------------------
+        // GEMINI_URL 將在 apiCall 中動態生成，因為 apiKey 現在是動態的
+        
+        let MAX_DEBATE_ROUNDS = 4; // Default, will be dynamic
+
+        // 難度設定
+        const DIFFICULTY_SETTINGS = {
+            EASY: {
+                key: 'EASY',
+                name: "鍵盤小屁孩",
+                description: "容易被情緒影響，邏輯薄弱。",
+                icon: "👶",
+                moraleMultiplier: 0.5, // 玩家傷害 x 2
+                winThreshold: 0.4 // 回合制模式中，士氣削弱 40% 即可判定勝利
+            },
+            MEDIUM: {
+                key: 'MEDIUM',
+                name: "社群嘴砲王",
+                description: "有一定的反駁能力，邏輯戰力平均。",
+                icon: "🗣️",
+                moraleMultiplier: 1.0, 
+                winThreshold: 0.6 // 士氣削弱 60%
+            },
+            HARD: {
+                key: 'HARD',
+                name: "專家辯論家",
+                description: "邏輯嚴謹，極難擊敗，士氣難以撼動。",
+                icon: "🧠",
+                moraleMultiplier: 1.5, // 玩家傷害 x 0.66
+                winThreshold: 0.8 // 士氣削弱 80%
+            }
+        };
+
+        const gameState = {
+            currentStage: 0, 
+            scenario: '',          
+            scenarioCategory: '',  
+            gameData: null,        
+            userFactChecks: null,  
+            fojScore: 0,           
+            glossary: {},          
+            
+            assignedRoleIndex: null, 
+            userRoleArgument: null,  
+            rolePlayCritique: null,  
+
+            difficulty: 'MEDIUM',    
+            bossCharacter: null,     
+            debateHistory: [],       
+            bossMorale: 100,         
+            gameMode: 'rounds', 
+            isSurrender: false,
+
+            evaluation: null
+        };
+        
+        let stageDisplay, gameContent, loadingState, errorState, errorMessageDetail, loadingMessage;
+        let stages = {};
+
+        // Helper: Markdown Bold 處理與換行
+        function parseText(text) {
+            if (!text) return '';
+            // 確保 **文字** 轉為 HTML bold，且 ** 不再顯示
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-yellow-400 font-bold">$1</strong>')
+                       .replace(/\n/g, '<br>');
+        }
+
+        // ----------------------------------------------------
+        // 2. Audio (Tone.js) - Smooth Ambient
+        // ----------------------------------------------------
+        
+        const synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" }, // Softer sound
+            envelope: { attack: 0.05, decay: 0.2, sustain: 0.2, release: 1.5 }
+        }).toDestination();
+        synth.volume.value = -5;
+
+        const clickSynth = new Tone.MembraneSynth().toDestination();
+        clickSynth.volume.value = -12;
+
+        // BGM
+        const bgmPad = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "triangle" },
+            envelope: { attack: 1, decay: 1, sustain: 0.8, release: 3 }
+        }).toDestination();
+        bgmPad.volume.value = -15;
+
+        let bgmLoop = null;
+        let isAudioInitialized = false;
+        let isBGMPlaying = false;
+
+        function playClickSFX() {
+            if (isAudioInitialized) clickSynth.triggerAttackRelease("C2", "32n");
+        }
+
+        function playSuccessSFX() {
+            if (isAudioInitialized) {
+                synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n");
+            }
+        }
+
+        function playFailureSFX() {
+            if (isAudioInitialized) {
+                synth.triggerAttackRelease(["A3", "E3", "C3"], "8n");
+            }
+        }
+        
+        function playBossResponseSFX() {
+            if (isAudioInitialized) synth.triggerAttackRelease(["G2", "D3"], "8n");
+        }
+
+        function startBGM() {
+            if (!isAudioInitialized || isBGMPlaying) return;
+
+            const chords = [
+                ["C3", "E3", "G3", "B3"],
+                ["A2", "C3", "E3", "G3"],
+                ["F2", "A2", "C3", "E3"],
+                ["G2", "B2", "D3", "F3"]
+            ];
+            let chordIndex = 0;
+
+            bgmLoop = new Tone.Loop(time => {
+                bgmPad.triggerAttackRelease(chords[chordIndex % chords.length], "2n", time);
+                chordIndex++;
+            }, "1n").start(0);
+
+            Tone.Transport.bpm.value = 60; // Slower, relaxed tempo
+            Tone.Transport.start();
+            isBGMPlaying = true;
+            document.getElementById('bgm-toggle').textContent = '⏸';
+            document.getElementById('bgm-toggle').classList.add('text-emerald-400');
+            document.getElementById('bgm-toggle').classList.remove('text-pink-400');
+        }
+        
+        function stopBGM() {
+            if (bgmLoop) {
+                bgmLoop.stop();
+                bgmLoop.dispose();
+                bgmLoop = null;
+            }
+            Tone.Transport.stop();
+            isBGMPlaying = false;
+            document.getElementById('bgm-toggle').textContent = '♫';
+            document.getElementById('bgm-toggle').classList.remove('text-emerald-400');
+            document.getElementById('bgm-toggle').classList.add('text-pink-400');
+        }
+
+        async function initializeAudio() {
+            if (isAudioInitialized) return;
+            try {
+                await Tone.start();
+                isAudioInitialized = true;
+                startBGM();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        // ----------------------------------------------------
+        // 3. UI Helper
+        // ----------------------------------------------------
+
+        function displayModal(title, content, actionButtons = '') {
+            const modalContainer = document.getElementById('modal-container');
+            modalContainer.innerHTML = `
+                <div class="modal" id="game-modal" onclick="if(event.target.id === 'game-modal') document.getElementById('modal-container').innerHTML = ''">
+                    <div class="modal-content" onclick="event.stopPropagation()">
+                        <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                            <h2 class="text-2xl font-bold text-white tracking-wide">${title}</h2>
+                            <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition" onclick="document.getElementById('modal-container').innerHTML = ''">
+                                ✕
+                            </button>
+                        </div>
+                        <div class="text-gray-300 leading-relaxed font-light space-y-4">
+                            ${content}
+                        </div>
+                        ${actionButtons ? `<div class="mt-6 pt-4 border-t border-gray-700 flex justify-end">${actionButtons}</div>` : `<div class="mt-6 pt-4 border-t border-gray-700 flex justify-end"><button class="soft-btn px-4 py-2 rounded-lg" onclick="document.getElementById('modal-container').innerHTML = ''">關閉</button></div>`}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // NEW: Function to display glossary definition
+        window.showGlossaryDefinition = (term) => {
+            playClickSFX();
+            const definition = gameState.glossary[term];
+            if (definition) {
+                displayModal(`📚 術語定義: ${term}`, 
+                    `<p class="text-lg text-yellow-300 font-bold mb-3">${term}</p>
+                    <p>${parseText(definition)}</p>
+                    <p class="text-xs text-gray-500 mt-4 italic">此詞彙源於貼文分析或提示資訊。</p>`
+                );
+            } else {
+                displayModal('錯誤', `<p>找不到詞彙 ${term} 的定義。</p>`);
+            }
+        };
+
+
+        function displayError(message) {
+            if (errorState && errorMessageDetail) {
+                errorState.classList.remove('hidden');
+                errorMessageDetail.textContent = message;
+                document.getElementById('game-content').classList.add('hidden'); 
+                loadingState.classList.add('hidden');
+                playFailureSFX();
+            }
+        }
+        
+        function hideError() {
+            if (errorState) errorState.classList.add('hidden');
+        }
+
+        function showScenario(show) {
+            const container = document.getElementById('scenario-display-container');
+            const content = document.getElementById('scenario-content-display');
+            if (show && gameState.scenario) {
+                const opContent = gameState.scenario.split('\n\n')[1] || gameState.scenario;
+                content.innerHTML = parseText(opContent);
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function showStage(stage) {
+            // Hide prev
+            const prev = stages[gameState.currentStage];
+            if (prev) {
+                prev.classList.add('hidden');
+                prev.classList.remove('stage-transition');
+            }
+
+            // Show new
+            const next = stages[stage];
+            if (next) {
+                next.classList.remove('hidden');
+                setTimeout(() => next.classList.add('stage-transition'), 10);
+            }
+
+            gameState.currentStage = stage;
+            const stageNames = {
+                0: '任務初始化', 
+                1: '邏輯分析', 
+                2: '角色模擬', 
+                3: '情報蒐集', 
+                4: '魔王戰', 
+                5: '最終結算'
+            };
+            if(stageDisplay) stageDisplay.textContent = `當前階段：${stageNames[stage]}`;
+
+            showScenario(stage >= 1);
+        }
+
+        function toggleLoading(show, message = 'AI 運算中...') {
+            if (loadingState && document.getElementById('game-content')) {
+                loadingState.classList.toggle('hidden', !show);
+                document.getElementById('game-content').classList.toggle('hidden', show); 
+                loadingMessage.textContent = message;
+            }
+        }
+        
+        // ----------------------------------------------------
+        // 4. API & Schemas
+        // ----------------------------------------------------
+        
+        function createPayload(prompt, schema, isRandomCall = false) {
+            const systemPrompt = isRandomCall 
+                ? "請生成貼近 Threads/Dcard 風格的中文貼文。請輸出純文字，不要使用markdown格式。"
+                : "您是思維辯論遊戲AI。請嚴格按照JSON Schema輸出繁體中文。角色資訊需包含emoji與立場動機。不要使用markdown格式。";
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            if (schema) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                };
+            }
+            return payload;
+        }
+        
+        const randomScenarioSchema = { type: "OBJECT", properties: { "postTitle": { "type": "STRING" }, "postContent": { "type": "STRING" } }, required: ["postTitle", "postContent"] };
+        const gameSetupSchema = { 
+            type: "OBJECT", 
+            properties: { 
+                "fojStatements": { 
+                    "type": "ARRAY", 
+                    "items": { 
+                        "type": "OBJECT", 
+                        "properties": {
+                            "statement": { "type": "STRING" },
+                            "correctAnswer": { "type": "STRING", "enum": ["Fact", "Opinion"] },
+                            "explanation": { "type": "STRING" },
+                            "term": { "type": "STRING", "description": "If the statement contains a complex or ambiguous noun/term, list it here for glossary. Otherwise, leave it empty." },
+                            "termDefinition": { "type": "STRING", "description": "The concise definition of the term, if provided." } 
+                        },
+                        "required": ["statement", "correctAnswer", "explanation", "term", "termDefinition"] 
+                    } 
+                }, 
+                "characters": { 
+                    "type": "ARRAY", 
+                    "items": { 
+                        "type": "OBJECT", 
+                        "properties": { 
+                            "name": { "type": "STRING" }, 
+                            "job": { "type": "STRING" }, 
+                            "icon": { "type": "STRING" }, 
+                            "stance": { "type": "STRING" }, 
+                            "motivation": { "type": "STRING" }, 
+                            "comment": { "type": "STRING" } 
+                        }, 
+                        "required": ["name", "job", "icon", "stance", "motivation", "comment"] 
+                    } 
+                } 
+            }, 
+            required: ["fojStatements", "characters"] 
+        };
+        const rolePlayCritiqueSchema = { type: "OBJECT", properties: { "score": { "type": "NUMBER" }, "critique": { "type": "STRING" } }, required: ["score", "critique"] };
+        const trollCharacterSchema = { type: "OBJECT", properties: { 
+            "name": { "type": "STRING" }, 
+            "job": { "type": "STRING", "description": "The troll's precise job or status, e.g., 待業、大學生、物流司機、人資助理" }, 
+            "age": { "type": "NUMBER", "description": "The troll's age, use a random number between 18 and 50." },
+            "icon": { "type": "STRING" }, 
+            "stance": { "type": "STRING" }, 
+            "initialComment": { "type": "STRING" },
+            "fallacies": { "type": "ARRAY", "items": { "type": "STRING", "description": "List 3 common logical fallacies the troll might use, e.g., 稻草人謬誤, 人身攻擊, 訴諸情感" } } 
+        }, required: ["name", "job", "age", "icon", "stance", "initialComment", "fallacies"] };
+        const bossResponseSchema = { type: "OBJECT", properties: { "bossResponse": { "type": "STRING" }, "statusMessage": { "type": "STRING" }, "moraleChange": { "type": "NUMBER", "description": "Negative integer (e.g., -20) if player argument is good/logical. Positive (e.g., +10) if player is irrational or weak." }, "logicalFallacy": { "type": "STRING", "description": "The specific logical fallacy used in this bossResponse, e.g., 訴諸群眾" } }, required: ["bossResponse", "statusMessage", "moraleChange", "logicalFallacy"] };
+        const evaluationSchema = { type: "OBJECT", properties: { "persuasionSuccess": { "type": "BOOLEAN" }, "finalBossVerdict": { "type": "STRING" }, "logicScore": { "type": "NUMBER" }, "debateCritique": { "type": "STRING" }, "debateSuggestions": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["persuasionSuccess", "finalBossVerdict", "logicScore", "debateCritique", "debateSuggestions"] };
+        const hintSchema = { type: "OBJECT", properties: { 
+            "hintText": { "type": "STRING" },
+            "keyTerm": { "type": "STRING", "description": "A single key technical or ambiguous term that the player should pay attention to." },
+            "termDefinition": { "type": "STRING", "description": "A brief explanation of the key term to aid the player's understanding." }
+        }, required: ["hintText", "keyTerm", "termDefinition"] };
+
+
+        // ----------------------------------------------------
+        // 5. API Fetch
+        // ----------------------------------------------------
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    if (response.status === 403 || response.status === 401) throw new Error("API Key Error");
+                    throw new Error(`Error: ${response.status}`);
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+                }
+            }
+        }
+
+        async function apiCall(payload) {
+            if (!apiKey || apiKey.trim() === '') throw new Error("API Key Missing");
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const response = await fetchWithRetry(url, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (jsonText) return JSON.parse(jsonText);
+            throw new Error("No valid response from AI");
+        }
+
+        // ----------------------------------------------------
+        // 6. Stage 0: Init
+        // ----------------------------------------------------
+        function renderApiKeyInput() {
+            hideError();
+            const html = `
+                <div class="card p-8 arena-bg max-w-lg mx-auto text-center">
+                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">-啟動系統-</h2>
+                    <p class="text-gray-400 mb-6 text-sm">請輸入您的 Gemini API Key 以啟動辯論系統。</p>
+                    
+                    <div class="mb-6 relative">
+                        <input type="password" id="api-key-input-field" 
+                            class="w-full p-4 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition shadow-inner text-center font-mono placeholder-gray-600"
+                            placeholder="AIzaSy...">
+                    </div>
+                    
+                    <button id="submit-api-key" class="w-full soft-btn-secondary py-4 rounded-xl text-xl font-bold tracking-widest shadow-xl">
+                        確認並連線
+                    </button>
+                    <p class="text-xs text-gray-600 mt-4">您的 Key 僅用於當前瀏覽器連線，不會被儲存。</p>
+                </div>
+            `;
+            stages[0].innerHTML = html;
+            
+            document.getElementById('submit-api-key').addEventListener('click', () => {
+                const key = document.getElementById('api-key-input-field').value.trim();
+                if (key.length > 20) { // Basic validation
+                    apiKey = key;
+                    playClickSFX();
+                    playSuccessSFX();
+                    renderTopicSelection(); // Proceed to next step
+                } else {
+                    displayError("無效的 API Key 格式");
+                }
+            });
+        }
+
+        async function generateRandomScenario(category) {
+            playClickSFX();
+            hideError();
+            toggleLoading(true, `AI 正在為您生成 **${category}** 類別中 有趣的、反諷的 爭議話題...`);
+            try {
+                const prompt = `請生成一個關於${category}的爭議性貼文(Threads/Dcard風格)。內容需帶有有趣或反諷的風格。150字左右。提供標題和內容。`;
+                const payload = createPayload(prompt, randomScenarioSchema, true);
+                const aiResult = await apiCall(payload);
+                gameState.scenario = `${aiResult.postTitle}\n\n${aiResult.postContent}`;
+                gameState.scenarioCategory = category;
+                
+                document.getElementById('scenario-input').value = gameState.scenario;
+                
+                toggleLoading(false);
+            } catch (error) {
+                toggleLoading(false);
+                displayError(error.message);
+            }
+        }
+        
+        function renderTopicSelection() {
+            hideError(); 
+            const html = `
+                <div class="card p-8 arena-bg">
+                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">選擇戰場話題</h2>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                        <button data-category="世界時事" class="soft-btn py-5 text-lg shadow-lg">🌍 世界時事</button>
+                        <button data-category="社會議題" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color:white;">🗣️ 社會議題</button>
+                        <button data-category="生活時事" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color:white;">🏡 生活時事</button>
+                        <button data-category="科技趨勢" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color:white;">🤖 科技趨勢</button>
+                        <button data-category="娛樂八卦" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color:white;">🍿 娛樂八卦</button>
+                        <button data-category="隨機生成" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color:white;">🎲 隨機生成</button>
+                    </div>
+
+                    <div class="relative flex py-5 items-center">
+                        <div class="flex-grow border-t border-gray-600"></div>
+                        <span class="flex-shrink-0 mx-4 text-gray-500 text-xs">或是手動輸入貼文</span>
+                        <div class="flex-grow border-t border-gray-600"></div>
+                    </div>
+
+                    <textarea id="scenario-input" rows="4" 
+                              class="w-full p-5 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition shadow-inner"
+                              placeholder="貼入 Threads/Dcard 文章內容..."></textarea>
+                    
+                    <button id="start-button" class="mt-8 w-full soft-btn-secondary py-4 rounded-xl text-xl font-bold tracking-widest shadow-xl">
+                        開始挑戰
+                    </button>
+                </div>
+            `;
+            stages[0].innerHTML = html;
+
+            stages[0].querySelectorAll('button[data-category]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    initializeAudio();
+                    const cat = btn.getAttribute('data-category');
+                    generateRandomScenario(cat === '隨機生成' ? '熱門議題' : cat);
+                });
+            });
+
+            document.getElementById('start-button').addEventListener('click', async () => {
+                playClickSFX();
+                initializeAudio();
+                const scenario = document.getElementById('scenario-input').value.trim();
+                if (!scenario) return displayError("請輸入貼文內容");
+                
+                gameState.scenario = scenario;
+                gameState.scenarioCategory = gameState.scenarioCategory || "自行輸入";
+
+                toggleLoading(true, `分析貼文架構、劃分 F/O (事實/觀點) 並生成角色中...`);
+                try {
+                    const prompt = `針對貼文：「${gameState.scenario}」。生成5個陳述句，並為每個陳述句提供其正確的 F/O (事實/觀點) 分類、詳細解釋，以及如果包含複雜詞彙，請在 "term" 欄位提供該詞彙並在 "termDefinition" 欄位提供該詞彙的簡潔解釋。請**不要**使用「判斷(Judgment)」作為分類結果。同時生成3個不同立場的社群角色，每個角色需有名字、職業、emoji icon、立場、具體動機(motivation)與初始評論。繁體中文。`;
+                    const payload = createPayload(prompt, gameSetupSchema);
+                    gameState.gameData = await apiCall(payload); 
+                    gameState.fojScore = 0; 
+                    
+                    gameState.glossary = {};
+                    gameState.gameData.fojStatements.forEach(item => {
+                        if (item.term && item.termDefinition) {
+                            gameState.glossary[item.term] = item.termDefinition;
+                        }
+                    });
+
+                    toggleLoading(false);
+                    playSuccessSFX();
+                    renderStage1();
+                    showStage(1);
+                } catch (error) {
+                    toggleLoading(false);
+                    displayError(error.message);
+                }
+            });
+        }
+        
+        // ----------------------------------------------------
+        // 7. Stage 1: F/O (Logic and Gameification)
+        // ----------------------------------------------------
+        function renderStage1() {
+            const fojData = gameState.gameData.fojStatements;
+            let html = `
+                <div class="card p-6 mb-6 border-l-4 border-emerald-500">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold text-emerald-400">Phase 1: 邏輯拆解 (事實/觀點)</h2>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs font-bold text-gray-400">當前得分: </span>
+                            <span id="foj-current-score" class="text-2xl font-black text-yellow-400">${gameState.fojScore}</span>
+                            <button id="foj-info-button" class="text-xs bg-gray-700 px-3 py-1 rounded-full text-white transition hover:bg-gray-600">什麼是 F/O?</button>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm mt-1">請判斷以下陳述是 事實(Fact) 還是 觀點(Opinion)。</p>
+                </div>
+                <div id="statement-list" class="space-y-4">
+            `;
+            
+            fojData.forEach((item, idx) => { 
+                html += `
+                    <div class="card p-5 flex flex-col md:flex-row justify-between items-center gap-4 foj-statement relative hover:shadow-md transition" data-index="${idx}" data-state="pending">
+                        <p class="text-white flex-grow font-medium leading-relaxed"><span class="text-emerald-500 font-mono mr-3">0${idx+1}.</span>${parseText(item.statement)}</p>
+                        <div class="flex space-x-2 shrink-0 foj-buttons">
+                            <button data-type="Fact" class="tag-btn bg-gray-800 border border-emerald-600/30 text-emerald-400 hover:bg-emerald-600 hover:text-white py-2 px-4 rounded-lg text-xs font-bold transition">事實</button>
+                            <button data-type="Opinion" class="tag-btn bg-gray-800 border border-yellow-600/30 text-yellow-400 hover:bg-yellow-600 hover:text-white py-2 px-4 rounded-lg text-xs font-bold transition">觀點</button>
+                        </div>
+                        <p class="result-message hidden text-sm font-bold absolute right-5 top-5"></p>
+                    </div>
+                `;
+            });
+
+            html += `</div>
+                <button id="stage1-next-button" class="mt-8 w-full soft-btn-secondary py-4 text-lg shadow-xl" disabled>
+                    提交並檢視結果
+                </button>
+            `;
+            stages[1].innerHTML = html;
+            
+            const userSelections = new Array(fojData.length).fill(null);
+            const nextBtn = document.getElementById('stage1-next-button');
+            const scoreDisplay = document.getElementById('foj-current-score');
+            let completedCount = 0;
+
+            document.getElementById('foj-info-button').addEventListener('click', () => {
+                displayModal('F/O 定義', 
+                    `<ul class="list-disc pl-5 space-y-2">
+                        <li><strong class="text-emerald-400">事實 (Fact)</strong>: 客觀存在，可被驗證真偽。分數: +20</li>
+                        <li><strong class="text-yellow-400">觀點 (Opinion)</strong>: 個人的想法或感受，無對錯之分。分數: +20</li>
+                    </ul>
+                    <p class="mt-4 text-sm text-gray-500 italic">每題答對可獲得 20 分。總分 100 分將作為最終邏輯分數的基礎。</p>`);
+            });
+
+            document.querySelectorAll('.tag-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const parent = e.target.closest('.foj-statement');
+                    if (parent.getAttribute('data-state') !== 'pending') return;
+                    
+                    playClickSFX();
+                    const idx = parent.getAttribute('data-index');
+                    const selectedType = e.target.getAttribute('data-type');
+                    const correctType = fojData[idx].correctAnswer;
+                    
+                    userSelections[idx] = selectedType;
+                    parent.setAttribute('data-state', 'selected');
+
+                    parent.querySelectorAll('.tag-btn').forEach(b => {
+                        b.disabled = true;
+                    });
+                    
+                    const messageEl = parent.querySelector('.result-message');
+                    messageEl.classList.remove('hidden');
+
+                    if (selectedType === correctType) {
+                        playSuccessSFX();
+                        parent.classList.add('border-emerald-500/50', 'bg-emerald-900/10');
+                        messageEl.classList.add('text-emerald-400');
+                        messageEl.textContent = '✅ 正確! (+20)';
+                        gameState.fojScore += 20; 
+                    } else {
+                        playFailureSFX();
+                        parent.classList.add('border-red-500/50', 'bg-red-900/10');
+                        messageEl.classList.add('text-red-400');
+                        messageEl.textContent = `❌ 錯誤. 正解: ${correctType}`;
+                    }
+
+                    scoreDisplay.textContent = gameState.fojScore;
+
+                    parent.querySelectorAll('.tag-btn').forEach(b => {
+                        if (b.getAttribute('data-type') === correctType) {
+                            b.classList.add('ring-2', 'ring-yellow-500', 'bg-yellow-800/30'); // Highlight correct choice
+                        }
+                    });
+
+                    completedCount++;
+                    if (completedCount === fojData.length) {
+                        nextBtn.disabled = false;
+                        nextBtn.classList.remove('soft-btn-secondary');
+                        nextBtn.classList.add('soft-btn');
+                    }
+                });
+            });
+
+            nextBtn.addEventListener('click', async () => {
+                playClickSFX();
+                gameState.userFactChecks = userSelections;
+                
+                renderStage2();
+                showStage(2);
+            });
+        }
+
+        // ----------------------------------------------------
+        // 8. Stage 2: Result & Role Play (評分嚴格化)
+        // ----------------------------------------------------
+        function renderStage2() {
+            const fojData = gameState.gameData.fojStatements;
+            const statements = fojData.map(item => item.statement);
+            
+            const role = gameState.gameData.characters[gameState.assignedRoleIndex = Math.floor(Math.random()*3)];
+
+            let html = `
+                <div class="card p-6 mb-6 border-l-4 border-emerald-500">
+                    <h2 class="text-xl font-bold text-emerald-400">Phase 2: 分析結果與角色模擬</h2>
+                    <div class="flex items-center space-x-4 mt-2">
+                         <p class="text-gray-400 text-sm">邏輯拆解得分: </p>
+                         <span class="text-3xl font-black text-yellow-400">${gameState.fojScore} / 100</span>
+                    </div>
+                </div>
+                <div class="space-y-4 mb-10">
+            `;
+            
+            statements.forEach((stmt, i) => {
+                const correct = fojData[i].correctAnswer;
+                const explanation = fojData[i].explanation;
+                const isCorrect = gameState.userFactChecks[i] === correct;
+                const color = isCorrect ? 'border-emerald-500/50' : 'border-red-500/50';
+                const bg = isCorrect ? 'bg-emerald-900/10' : 'bg-red-900/10';
+                
+                const wrongBadge = !isCorrect ? `<span class="text-xs font-bold text-red-300 mr-2 strike-through">您選: ${gameState.userFactChecks[i]}</span>` : '';
+
+                html += `
+                    <div class="card p-4 border-l-4 ${color} ${bg} rounded-r-xl">
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-sm text-gray-200 font-medium">${parseText(stmt)}</p>
+                            <span class="text-xs px-2 py-1 rounded-md ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'} font-bold whitespace-nowrap ml-2">
+                                ${isCorrect ? '✅' : '❌'}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-400 bg-gray-900/50 p-3 rounded-lg">
+                            <p class="mb-1">${wrongBadge} <span class="text-emerald-400 font-bold">正解: ${correct}</span></p>
+                            <p>${parseText(explanation)}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                </div>
+                <div id="role-play-area" class="card p-8 border-2 border-indigo-500/50 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 text-9xl">🎭</div>
+                    <h2 class="text-2xl font-bold text-indigo-400 mb-6">Role Assignment: 角色分派</h2>
+                    
+                    <div class="bg-indigo-900/20 p-6 rounded-2xl border border-indigo-500/30 flex flex-col md:flex-row items-center gap-6 mb-6">
+                        <div class="text-7xl emoji-icon drop-shadow-xl filter">${role.icon}</div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-white mb-1">${role.name}</h3>
+                            <p class="text-indigo-300 font-medium mb-3">${role.job} <span class="mx-2">|</span> 立場：${role.stance}</p>
+                            
+                            <div class="bg-black/30 p-4 rounded-xl">
+                                <p class="text-xs text-indigo-200 font-bold mb-1 uppercase tracking-wider">動機 (Motivation):</p>
+                                <p class="text-gray-300 text-sm italic leading-relaxed">${parseText(role.motivation || '無動機資料')}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-gray-300 mb-2 font-medium">任務：請根據該角色的動機與立場，撰寫一則留言。</p>
+                    <textarea id="role-input" rows="4" class="w-full p-4 bg-gray-800 border border-indigo-500/50 rounded-xl text-white focus:border-indigo-400 transition" placeholder="試著模仿 ${role.name} 的語氣..."></textarea>
+                    <button id="stage2-btn" class="mt-6 w-full soft-btn-secondary py-4 rounded-xl text-lg font-bold" disabled>提交模擬留言</button>
+                </div>
+                <div id="critique-area"></div>
+            `;
+            stages[2].innerHTML = html;
+
+            const input = document.getElementById('role-input');
+            const btn = document.getElementById('stage2-btn');
+            input.addEventListener('input', () => btn.disabled = input.value.length < 5);
+
+            btn.addEventListener('click', async () => {
+                playClickSFX();
+                gameState.userRoleArgument = input.value;
+                toggleLoading(true, 'AI 導師評分中...');
+                try {
+                    // UPDATED PROMPT: 要求 AI 嚴格評分，並對複製貼上行為給予 0 分
+                    const critiquePrompt = `評估角色扮演：角色 ${role.name} (職業: ${role.job}, 動機: ${role.motivation}, 立場: ${role.stance})，玩家模擬評論：${input.value}。
+您現在是一個極其嚴格的辯論導師。請根據玩家對角色立場、語氣和核心動機的貼合程度，進行嚴厲的評分(0-100)。
+規則 1：若玩家的評論與角色設定有細微偏差，請嚴格扣分（例如，動機未體現、語氣不夠像、論點太理性等）。
+規則 2 (致命錯誤)：如果玩家的評論只是直接複製或稍微改寫上述提供的「動機」或「立場」文字，而不是以角色口吻進行創作，請直接給予 0 分，並嚴厲斥責這種偷懶行為。
+務必在評論(critique)中明確指出玩家模仿的成功與失敗之處。
+請給分(0-100)與回饋。`;
+                    const res = await apiCall(createPayload(critiquePrompt, rolePlayCritiqueSchema));
+                    gameState.rolePlayCritique = res;
+                    
+                    const scoreColor = res.score >= 80 ? 'text-emerald-400' : (res.score >= 60 ? 'text-yellow-400' : 'text-red-400');
+                    document.getElementById('role-play-area').classList.add('hidden');
+                    document.getElementById('critique-area').innerHTML = `
+                        <div class="card p-8 border-t-4 border-indigo-500 stage-transition">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-2xl font-bold text-white">導師回饋</h3>
+                                <div class="text-center">
+                                    <span class="text-4xl font-black ${scoreColor}">${res.score}</span>
+                                    <span class="text-sm text-gray-500 block">分</span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-800/50 p-6 rounded-2xl mb-6">
+                                <p class="text-gray-300 leading-relaxed">${parseText(res.critique)}</p>
+                            </div>
+                            <button id="to-stage3" class="w-full soft-btn py-4 text-lg">前往下一階段</button>
+                        </div>
+                    `;
+                    document.getElementById('to-stage3').addEventListener('click', () => {
+                        renderStage3(); showStage(3);
+                    });
+                    toggleLoading(false);
+                    playSuccessSFX();
+                } catch (e) {
+                    toggleLoading(false);
+                    displayError(e.message);
+                }
+            });
+        }
+
+        // ----------------------------------------------------
+        // 9. Stage 3: Observation
+        // ----------------------------------------------------
+        function renderStage3() {
+            const characters = gameState.gameData.characters;
+            const glossaryTerms = Object.keys(gameState.glossary);
+
+            let html = `
+                <div class="card p-6 mb-6 border-l-4 border-emerald-500">
+                    <h2 class="text-xl font-bold text-emerald-400">Phase 3: 輿論觀察 (情報蒐集)</h2>
+                    <p class="text-gray-400 text-sm mt-1">知己知彼。觀察社群上不同立場的聲音並熟悉術語。</p>
+                </div>
+
+                <!-- Glossary Section -->
+                ${glossaryTerms.length > 0 ? `
+                <div class="card p-5 mb-6 bg-yellow-900/20 border-yellow-500/50">
+                    <h3 class="text-lg font-bold text-yellow-400 mb-3 flex items-center">
+                        <span class="mr-2">📚</span> 專有名詞 / 關鍵術語
+                    </h3>
+                    <div id="glossary-list-stage3" class="flex flex-wrap gap-2">
+                        ${glossaryTerms.map(term => `<span class="glossary-term bg-yellow-800/50 text-yellow-300 text-xs px-3 py-1 rounded-full border border-yellow-700" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            `;
+            characters.forEach((char, i) => { 
+                html += `
+                    <div class="card p-5 character-enter hover:-translate-y-1 transition-transform" style="animation-delay: ${i*0.1}s">
+                        <div class="flex items-center mb-4">
+                            <span class="text-4xl mr-3 emoji-icon">${char.icon}</span>
+                            <div>
+                                <h3 class="font-bold text-white leading-tight">${char.name}</h3>
+                                <p class="text-xs text-emerald-400 font-mono">${char.job}</p>
+                            </div>
+                        </div>
+                        <div class="bg-gray-700/30 p-4 rounded-xl rounded-tl-none text-sm text-gray-200 dialog-bubble leading-relaxed" style="animation-delay: ${0.5+i*0.1}s">
+                            ${parseText(char.comment)}
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>
+                <button id="to-stage4-setup" class="mt-10 w-full soft-btn-danger py-5 text-xl font-black tracking-widest shadow-xl">
+                    ⚠️ 進入戰鬥準備 (BATTLE SETUP)
+                </button>
+            `;
+            stages[3].innerHTML = html;
+            document.getElementById('to-stage4-setup').addEventListener('click', () => {
+                playClickSFX();
+                renderStage4Setup();
+                showStage(4);
+            });
+        }
+
+        // ----------------------------------------------------
+        // 10. Stage 4: Boss Battle (Setup & Battle)
+        // ----------------------------------------------------
+        async function getHint(bossTxt, userTxt, bossFallacies) {
+            const prompt = `
+                情境：${gameState.scenario}
+                酸民論點：${bossTxt}
+                酸民可能的邏輯謬誤清單: ${bossFallacies.join(', ')}
+                玩家困境：不知道如何反駁。
+                請給出一個簡短的「邏輯反駁提示」（不要直接給答案，指出對方邏輯謬誤方向或可用的事實）。同時，如果提示中包含關鍵術語或概念，請在 keyTerm 和 termDefinition 中返回其名稱和解釋。
+            `;
+            const payload = createPayload(prompt, hintSchema);
+            return await apiCall(payload);
+        }
+
+        async function renderStage4Setup() {
+            toggleLoading(true, '正在分析酸民戰力...');
+            gameState.debateHistory = [];
+            gameState.bossMorale = 100;
+            gameState.isSurrender = false;
+            gameState.difficulty = 'MEDIUM'; // Reset to default
+
+            try {
+                const op = gameState.scenario.split('\n\n')[1] || gameState.scenario;
+                const prompt = `針對「${op}」生成一個「沒看內文就開噴」的酸民。請為他指定一個確切的職業（例如：待業、大學生、物流司機、人資助理等）和年齡（18-50歲）。並提供3種他常用的邏輯謬誤清單。繁體中文。`;
+                const boss = await apiCall(createPayload(prompt, trollCharacterSchema));
+                gameState.bossCharacter = boss;
+
+                // Render Setup UI
+                let html = `
+                    <div class="card p-8 border-2 border-red-500 rounded-3xl text-center">
+                        <h2 class="text-3xl font-black text-red-500 mb-2 tracking-widest uppercase">⚠️ WARNING: BOSS DETECTED</h2>
+                        <div class="flex justify-center my-6">
+                            <div class="text-9xl emoji-icon animate-pulse">${boss.icon}</div>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-1">${boss.name}</h3>
+                        <p class="text-red-400 font-mono mb-6">${boss.job} (${boss.age}歲) | ${boss.stance}</p>
+                        
+                        <div class="bg-red-900/20 p-6 rounded-2xl mb-8 border border-red-500/30 text-left">
+                            <p class="text-sm text-red-300 font-bold mb-2">酸民攻擊預告：</p>
+                            <p class="text-gray-200 italic">${parseText(boss.initialComment)}</p>
+                            <p class="text-xs text-red-400 mt-4 border-t border-red-700/50 pt-2">常見謬誤：${boss.fallacies.join('、')}</p>
+                        </div>
+
+                        <h4 class="text-xl font-bold text-white mb-4 border-t border-gray-700 pt-6">選擇對戰難度 (Difficulty)</h4>
+                        <div class="grid grid-cols-3 gap-4 mb-6" id="difficulty-selector">
+                            <!-- Easy -->
+                            <button data-difficulty="EASY" class="soft-btn-difficulty py-5 rounded-xl transition-all hover:border-emerald-500">
+                                <div class="text-3xl mb-1">${DIFFICULTY_SETTINGS.EASY.icon}</div>
+                                <h5 class="text-lg font-bold text-emerald-400">${DIFFICULTY_SETTINGS.EASY.name}</h5>
+                                <p class="text-xs text-gray-400">${DIFFICULTY_SETTINGS.EASY.description}</p>
+                            </button>
+                            <!-- Medium -->
+                            <button data-difficulty="MEDIUM" class="soft-btn-difficulty py-5 rounded-xl transition-all selected">
+                                <div class="text-3xl mb-1">${DIFFICULTY_SETTINGS.MEDIUM.icon}</div>
+                                <h5 class="text-lg font-bold text-indigo-400">${DIFFICULTY_SETTINGS.MEDIUM.name}</h5>
+                                <p class="text-xs text-gray-400">${DIFFICULTY_SETTINGS.MEDIUM.description}</p>
+                            </button>
+                            <!-- Hard -->
+                            <button data-difficulty="HARD" class="soft-btn-difficulty py-5 rounded-xl transition-all hover:border-red-500">
+                                <div class="text-3xl mb-1">${DIFFICULTY_SETTINGS.HARD.icon}</div>
+                                <h5 class="text-lg font-bold text-red-400">${DIFFICULTY_SETTINGS.HARD.name}</h5>
+                                <p class="text-xs text-gray-400">${DIFFICULTY_SETTINGS.HARD.description}</p>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <button id="mode-rounds" data-mode="rounds" class="group relative bg-gray-800 hover:bg-blue-900/40 border border-gray-600 hover:border-blue-500 p-6 rounded-2xl transition-all ring-2 ring-blue-500 bg-blue-900/20">
+                                <div class="text-4xl mb-2 group-hover:scale-110 transition-transform">⏱️</div>
+                                <h4 class="text-xl font-bold text-white mb-1">戰術回合 (Tactical)</h4>
+                                <div class="flex items-center justify-center mt-2 space-x-2">
+                                    <span class="text-sm text-gray-400">回合數:</span>
+                                    <input type="number" id="round-input" value="4" min="1" max="10" class="w-16 bg-black/30 border border-gray-500 rounded text-center text-white" onclick="event.stopPropagation()">
+                                </div>
+                                <div id="check-rounds" class="absolute top-4 right-4 text-emerald-400 text-xl">✔</div>
+                            </button>
+                            <button id="mode-endless" data-mode="endless" class="group relative bg-gray-800 hover:bg-red-900/40 border border-gray-600 hover:border-red-500 p-6 rounded-2xl transition-all">
+                                <div class="text-4xl mb-2 group-hover:scale-110 transition-transform">💀</div>
+                                <h4 class="text-xl font-bold text-white mb-1">無盡死鬥 (Endless)</h4>
+                                <p class="text-sm text-gray-400">直到酸民士氣歸零為止。</p>
+                                <div id="check-endless" class="absolute top-4 right-4 text-emerald-400 hidden text-xl">✔</div>
+                            </button>
+                        </div>
+
+                        <button id="start-battle" class="w-full soft-btn-danger py-5 text-xl font-black tracking-widest shadow-2xl">
+                            FIGHT! 開始對峙
+                        </button>
+                    </div>
+                `;
+                stages[4].innerHTML = html;
+                toggleLoading(false);
+
+                // --- Mode Selection Logic ---
+                let selectedMode = 'rounds';
+                const btnEndless = document.getElementById('mode-endless');
+                const btnRounds = document.getElementById('mode-rounds');
+                const checkEndless = document.getElementById('check-endless');
+                const checkRounds = document.getElementById('check-rounds');
+                const roundInput = document.getElementById('round-input');
+
+                function selectMode(mode) {
+                    selectedMode = mode;
+                    if (mode === 'endless') {
+                        btnEndless.classList.add('ring-2', 'ring-red-500', 'bg-red-900/20');
+                        btnRounds.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-900/20');
+                        checkEndless.classList.remove('hidden');
+                        checkRounds.classList.add('hidden');
+                        roundInput.disabled = true;
+                        roundInput.classList.add('opacity-50');
+                    } else {
+                        btnRounds.classList.add('ring-2', 'ring-blue-500', 'bg-blue-900/20');
+                        btnEndless.classList.remove('ring-2', 'ring-red-500', 'bg-red-900/20');
+                        checkRounds.classList.remove('hidden');
+                        checkEndless.classList.add('hidden');
+                        roundInput.disabled = false;
+                        roundInput.classList.remove('opacity-50');
+                    }
+                }
+
+                btnEndless.addEventListener('click', () => selectMode('endless'));
+                btnRounds.addEventListener('click', (e) => {
+                    if (e.target.tagName !== 'INPUT') selectMode('rounds');
+                });
+                roundInput.addEventListener('focus', () => selectMode('rounds'));
+                
+                // --- Difficulty Selection Logic ---
+                const diffButtons = document.querySelectorAll('#difficulty-selector button');
+                diffButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const difficultyKey = btn.getAttribute('data-difficulty');
+                        gameState.difficulty = difficultyKey;
+                        diffButtons.forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        playClickSFX();
+                    });
+                });
+
+                document.getElementById('start-battle').addEventListener('click', () => {
+                    playClickSFX();
+                    gameState.gameMode = selectedMode;
+                    if (selectedMode === 'rounds') {
+                        MAX_DEBATE_ROUNDS = parseInt(roundInput.value) || 4;
+                    } else {
+                        MAX_DEBATE_ROUNDS = 999; // Effectively infinite
+                    }
+                    renderStage4Battle();
+                });
+
+            } catch (e) {
+                toggleLoading(false);
+                displayError(e.message);
+            }
+        }
+
+        function renderStage4Battle() {
+            const boss = gameState.bossCharacter;
+            const difficulty = DIFFICULTY_SETTINGS[gameState.difficulty];
+            
+            let html = `
+                <div class="card p-6 mb-6 border-red-500/50 bg-red-900/5 flex justify-between items-center rounded-2xl">
+                    <div>
+                        <h2 class="text-2xl font-black text-red-400 tracking-wide">Phase 4: 最終鍵盤戰</h2>
+                        <p class="text-red-300/70 text-sm">難度: ${difficulty.name} | ${gameState.gameMode === 'endless' ? '(無盡模式: 士氣歸零獲勝)' : `(回合模式: ${MAX_DEBATE_ROUNDS}回合)`}</p>
+                    </div>
+                    <div class="text-right w-1/3">
+                        <p class="text-xs text-red-400 font-bold mb-1 uppercase">Boss Morale (士氣)</p>
+                        <div class="w-full h-3 bg-gray-700 rounded-full overflow-hidden relative">
+                            <div id="boss-morale-bar-fill" class="h-full bg-red-500 w-full transition-all duration-500"></div>
+                        </div>
+                        <p id="morale-value" class="text-xs text-red-300 mt-1 font-mono">100%</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-6 h-[500px]">
+                    <!-- Boss Profile & Logic Notes (Updated) -->
+                    <div class="md:w-1/3 flex flex-col space-y-4">
+                        <div class="card p-6 text-center border-t-4 border-red-500 h-fit">
+                            <div class="text-8xl mb-4 emoji-icon animate-pulse">${boss.icon}</div>
+                            <h3 class="text-2xl font-bold text-white">${boss.name}</h3>
+                            <p class="text-red-400 font-medium text-sm mb-4">${boss.job} (${boss.age}歲) | ${boss.stance}</p>
+                        </div>
+                        
+                        <!-- NEW: Logic Notes/Glossary Section -->
+                        <div class="card p-4 flex-grow border-t-4 border-yellow-500 overflow-y-auto bg-gray-800/50">
+                            <h4 class="text-lg font-bold text-yellow-400 mb-3 flex items-center border-b border-gray-700 pb-2">
+                                <span class="mr-2">📝</span> 邏輯筆記與紀錄
+                            </h4>
+                            <div id="logic-notes" class="space-y-3 text-sm text-gray-300">
+                                <p class="text-xs text-gray-500 italic">--- 謬誤紀錄 ---</p>
+                                <div id="fallacy-log" class="space-y-1">
+                                    <!-- Fallacies will be logged here -->
+                                </div>
+                                <p class="text-xs text-gray-500 italic pt-2 border-t border-gray-700">--- 專有名詞 ---</p>
+                                <div id="glossary-display" class="flex flex-wrap gap-2">
+                                    ${Object.keys(gameState.glossary).map(term => 
+                                        `<span id="term-${term}" class="glossary-term bg-yellow-800/50 text-yellow-300 text-xs px-3 py-1 rounded-full border border-yellow-700" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Battle Log & Input -->
+                    <div class="md:w-2/3 flex flex-col h-full">
+                        <div id="debate-log" class="flex-grow bg-black/20 border border-gray-700/50 p-5 rounded-2xl overflow-y-auto mb-4 space-y-4 scroll-smooth">
+                            <!-- Logs -->
+                        </div>
+                        
+                        <div class="relative shrink-0">
+                            <textarea id="debate-input" rows="3" class="w-full p-4 bg-gray-800 border border-gray-600 rounded-xl text-white focus:border-indigo-500 transition shadow-inner" placeholder="用事實與邏輯反擊..."></textarea>
+                            
+                            <div class="flex gap-3 mt-3">
+                                <button id="surrender-btn" class="px-4 py-3 rounded-xl font-bold text-sm bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-500 transition whitespace-nowrap">
+                                    🏳️ 我放棄
+                                </button>
+                                <button id="hint-btn" class="flex-1 py-3 rounded-xl font-bold text-sm bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 border border-yellow-600/50 transition">
+                                    💡 索取提示
+                                </button>
+                                <button id="send-btn" class="flex-[2] soft-btn-secondary py-3 rounded-xl font-bold tracking-widest disabled:opacity-50">
+                                    發送反擊
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            stages[4].innerHTML = html;
+
+            gameState.debateHistory.push({speaker:'Boss', text:boss.initialComment});
+            addLog('Boss', boss.initialComment, boss.icon);
+            
+            const sendBtn = document.getElementById('send-btn');
+            const hintBtn = document.getElementById('hint-btn');
+            const surrenderBtn = document.getElementById('surrender-btn');
+            const input = document.getElementById('debate-input');
+            const moraleBar = document.getElementById('boss-morale-bar-fill');
+            const moraleVal = document.getElementById('morale-value');
+            
+            let currentRound = 1;
+            const fallacyLog = document.getElementById('fallacy-log');
+            const glossaryDisplay = document.getElementById('glossary-display');
+            let loggedFallacies = [];
+
+            // Input validation for enabling/disabling send button
+            input.addEventListener('input', () => {
+                sendBtn.disabled = input.value.trim().length < 5;
+            });
+            sendBtn.disabled = true;
+
+            surrenderBtn.addEventListener('click', async () => {
+                displayModal('確認投降', 
+                    `<p>確定要放棄辯論嗎？</p><p class="text-red-400 font-bold">一旦投降，酸民將會宣稱勝利，並嚴重影響您的最終評分。</p>`,
+                    `
+                    <button class="soft-btn-danger px-4 py-2 rounded-lg" onclick="
+                        gameState.isSurrender = true; 
+                        document.getElementById('modal-container').innerHTML = ''; 
+                        finishBattle();
+                    ">確定放棄</button>
+                    <button class="bg-gray-700 text-white px-4 py-2 rounded-lg ml-3" onclick="document.getElementById('modal-container').innerHTML = ''">取消</button>
+                    `
+                );
+            });
+
+            hintBtn.addEventListener('click', async () => {
+                playClickSFX();
+                if (input.disabled) return;
+                hintBtn.disabled = true;
+                hintBtn.innerHTML = '<span class="animate-pulse">分析弱點中...</span>';
+                try {
+                    const lastBossArg = gameState.debateHistory.filter(h => h.speaker === 'Boss').pop().text;
+                    const hintRes = await getHint(lastBossArg, input.value, boss.fallacies);
+                    
+                    if (hintRes.keyTerm && hintRes.termDefinition) {
+                        const term = hintRes.keyTerm;
+                        const definition = hintRes.termDefinition;
+                        
+                        if (gameState.glossary[term] !== definition) {
+                            gameState.glossary[term] = definition;
+                            if (!document.getElementById(`term-${term}`)) {
+                                const termHtml = `<span id="term-${term}" class="glossary-term bg-yellow-800/50 text-yellow-300 text-xs px-3 py-1 rounded-full border border-yellow-700" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`;
+                                glossaryDisplay.innerHTML += termHtml;
+                            }
+                        }
+                    }
+
+                    displayModal('戰術提示', `<p class="text-yellow-400 text-lg mb-2 font-bold">建議切入點：</p><p>${parseText(hintRes.hintText)}</p>`);
+
+                } catch(e) { 
+                    console.error(e); 
+                    displayModal('提示失敗', `<p class="text-red-400">無法取得提示。AI 連線可能中斷。</p>`);
+                } finally {
+                    hintBtn.disabled = false;
+                    hintBtn.innerHTML = '💡 索取提示';
+                }
+            });
+
+            sendBtn.addEventListener('click', async () => {
+                playClickSFX();
+                const txt = input.value.trim();
+                if (txt.length < 5) return;
+                
+                input.value = '';
+                input.disabled = true;
+                sendBtn.disabled = true;
+                hintBtn.disabled = true;
+                surrenderBtn.disabled = true;
+
+                addLog('User', txt, '👤');
+                gameState.debateHistory.push({speaker:'User', text:txt});
+
+                if (gameState.gameMode === 'rounds' && currentRound >= MAX_DEBATE_ROUNDS) {
+                     finishBattle();
+                     return;
+                }
+
+                const prompt = `酸民回應：${JSON.stringify(gameState.debateHistory)}。玩家最新：${txt}。堅持誤讀，情緒化。請根據玩家反駁的有效性給予 moraleChange (負數代表酸民受傷，正數代表酸民得意)。同時，請指明酸民本次回應中使用的「邏輯謬誤」名稱，例如: 稻草人謬誤。`;
+                try {
+                    const bossRes = await apiCall(createPayload(prompt, bossResponseSchema));
+                    
+                    const difficulty = DIFFICULTY_SETTINGS[gameState.difficulty];
+                    let change = bossRes.moraleChange || -10; 
+                    
+                    if (change < 0) {
+                        change = Math.round(change / difficulty.moraleMultiplier); 
+                    } else {
+                        change = Math.round(change * difficulty.moraleMultiplier); 
+                    }
+
+                    gameState.bossMorale = Math.max(0, Math.min(100, gameState.bossMorale + change));
+                    
+                    playBossResponseSFX();
+                    addLog('Boss', bossRes.bossResponse, boss.icon, bossRes.statusMessage);
+                    gameState.debateHistory.push({speaker:'Boss', text:bossRes.bossResponse, fallacy: bossRes.logicalFallacy, moraleChange: change});
+                    
+                    if (bossRes.logicalFallacy && !loggedFallacies.includes(bossRes.logicalFallacy)) {
+                        loggedFallacies.push(bossRes.logicalFallacy);
+                        fallacyLog.innerHTML += `
+                            <div class="flex items-start text-xs text-red-300">
+                                <span class="text-red-500 mr-2 shrink-0 mt-1">🚨</span> 
+                                <span class="font-bold">${bossRes.logicalFallacy}:</span> ${boss.name} 又犯錯了!
+                            </div>
+                        `;
+                        fallacyLog.scrollTop = fallacyLog.scrollHeight;
+                    }
+
+
+                    moraleBar.style.width = `${gameState.bossMorale}%`;
+                    moraleVal.textContent = `${gameState.bossMorale}%`;
+                    
+                    const moraleContainer = document.getElementById('boss-morale-bar-fill').parentElement;
+                    if(change < 0) {
+                        moraleContainer.classList.add('ring-2', 'ring-emerald-400');
+                        setTimeout(() => moraleContainer.classList.remove('ring-2', 'ring-emerald-400'), 500);
+                    } else {
+                        moraleContainer.classList.add('ring-2', 'ring-red-600');
+                        setTimeout(() => moraleContainer.classList.remove('ring-2', 'ring-red-600'), 500);
+                    }
+
+                    if (gameState.bossMorale <= 0) {
+                        setTimeout(finishBattle, 1000);
+                        return;
+                    }
+
+                    currentRound++;
+                } catch(e) {
+                    displayError(e.message);
+                } finally {
+                    input.disabled = false;
+                    sendBtn.disabled = input.value.trim().length < 5;
+                    hintBtn.disabled = false;
+                    surrenderBtn.disabled = false;
+                }
+            });
+        }
+
+        async function finishBattle() {
+            toggleLoading(true, '裁判最終判決中...');
+            
+            const difficulty = DIFFICULTY_SETTINGS[gameState.difficulty];
+            let context = `玩家是否投降: ${gameState.isSurrender}。酸民剩餘士氣: ${gameState.bossMorale}。遊戲模式: ${gameState.gameMode}。玩家 F/O/J 階段得分: ${gameState.fojScore}。`;
+            let isRoundWin = false;
+            
+            if (gameState.gameMode === 'rounds' && gameState.bossMorale > 0) {
+                const totalMoraleLost = 100 - gameState.bossMorale;
+                const requiredMoraleLoss = 100 * difficulty.winThreshold;
+                if (totalMoraleLost >= requiredMoraleLoss) {
+                    isRoundWin = true;
+                    context += ` 玩家在回合模式中成功削弱 ${totalMoraleLost}% 士氣，達到門檻 ${requiredMoraleLoss}%，判定為戰術性勝利。`;
+                } else {
+                    context += ` 玩家在回合模式中僅削弱 ${totalMoraleLost}% 士氣，未達門檻 ${requiredMoraleLoss}%，判定為失敗。`;
+                }
+            }
+
+            if (gameState.isSurrender) context += " 玩家主動放棄，酸民獲得勝利。";
+            else if (gameState.bossMorale <= 0) context += " 酸民士氣崩潰，玩家獲得壓倒性勝利。";
+            else if (isRoundWin) context += " 玩家獲得戰術性勝利。";
+            
+            const prompt = `評審辯論歷史：${JSON.stringify(gameState.debateHistory)}。情境背景：${context}。請針對玩家表現，提供3個具體的「辯論優化建議」(debateSuggestions)。**重要：最終邏輯分數(logicScore)必須綜合考慮玩家在 F/O 階段的得分(max 100)與魔王戰的表現(士氣扣減多寡)來計算，使達成勝利條件的玩家能獲得更高的分數 (例如: > 80)。**`;
+            try {
+                const evalRes = await apiCall(createPayload(prompt, evaluationSchema));
+                gameState.evaluation = evalRes;
+                renderStage5(); 
+                showStage(5);
+            } catch(e) {
+                displayError(e.message);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        function addLog(speaker, text, icon, status) {
+            const log = document.getElementById('debate-log');
+            const isUser = speaker === 'User';
+            const parsedText = parseText(text);
+            
+            const html = `
+                <div class="flex ${isUser ? 'justify-end log-entry-user' : 'justify-start log-entry-boss'}">
+                    <div class="${isUser ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'} p-4 rounded-2xl max-w-[85%] shadow-md relative group">
+                        <div class="absolute -top-3 ${isUser ? '-right-2' : '-left-2'} text-2xl drop-shadow-md group-hover:scale-110 transition-transform">${icon}</div>
+                        <p class="text-sm leading-relaxed">${parsedText}</p>
+                        ${status ? `<p class="text-xs text-yellow-300/80 mt-2 font-mono border-t border-white/10 pt-1">STATUS: ${status}</p>` : ''}
+                    </div>
+                </div>
+            `;
+            log.innerHTML += html;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // ----------------------------------------------------
+        // 11. Stage 5: Evaluation
+        // ----------------------------------------------------
+        function renderStage5() {
+            const { persuasionSuccess, finalBossVerdict, logicScore, debateCritique, debateSuggestions } = gameState.evaluation;
+            const boss = gameState.bossCharacter;
+            
+            const difficulty = DIFFICULTY_SETTINGS[gameState.difficulty];
+            let realSuccess = (gameState.bossMorale <= 0); 
+            
+            if (gameState.gameMode === 'rounds' && gameState.bossMorale > 0) {
+                const totalMoraleLost = 100 - gameState.bossMorale;
+                const requiredMoraleLoss = 100 * difficulty.winThreshold;
+                if (totalMoraleLost >= requiredMoraleLoss) {
+                    realSuccess = true; 
+                }
+            }
+            
+            const realFail = gameState.isSurrender || (!realSuccess);
+
+            if(!realFail) playSuccessSFX(); else playFailureSFX();
+
+            let resultTitle = realFail ? '挑戰失敗' : '辯論勝利！';
+            if (gameState.isSurrender) resultTitle = '戰術撤退 (投降)';
+            let resultIcon = realFail ? '💀' : '🏆';
+
+            let html = `
+                <div class="card p-10 text-center border-t-8 ${!realFail ? 'border-emerald-500' : 'border-red-500'} stage-transition">
+                    <div class="mb-6">
+                        <span class="text-6xl filter drop-shadow-xl">${resultIcon}</span>
+                    </div>
+                    <h1 class="text-4xl font-black mb-2 ${!realFail ? 'text-emerald-400' : 'text-red-500'} tracking-tight">
+                        ${resultTitle}
+                    </h1>
+                    <p class="text-gray-400 font-medium tracking-widest mb-10 uppercase">Final Evaluation Report</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                        <div class="bg-gray-800/50 p-6 rounded-2xl border border-yellow-500/30">
+                            <h3 class="text-yellow-400 font-bold mb-3 flex items-center">
+                                <span class="mr-2">📊</span> 邏輯分數 (Logic Score)
+                            </h3>
+                            <div class="text-6xl font-black text-white mb-3 tracking-tighter">${logicScore}<span class="text-xl text-gray-500 font-normal ml-2">/100</span></div>
+                            <p class="text-sm text-gray-300 leading-relaxed">${parseText(debateCritique)}</p>
+                            <p class="text-xs text-gray-500 mt-2">F/O 階段貢獻： ${gameState.fojScore} 分</p>
+                        </div>
+                        
+                        <div class="bg-gray-800/50 p-6 rounded-2xl border border-purple-500/30">
+                            <h3 class="text-purple-400 font-bold mb-3 flex items-center">
+                                <span class="mr-2">👾</span> 對手狀態 (Target Status)
+                            </h3>
+                            <div class="flex items-center mb-4 bg-black/20 p-3 rounded-xl">
+                                <span class="text-4xl mr-3 emoji-icon">${boss.icon}</span>
+                                <span class="text-white font-bold text-lg">${boss.name} <span class="text-sm text-gray-400 ml-2">(${boss.age}歲, ${boss.job})</span></span>
+                            </div>
+                            <p class="text-white italic text-sm border-l-2 border-purple-500 pl-3">${parseText(finalBossVerdict)}</p>
+                            <p class="text-xs text-gray-500 mt-2 text-right">難度: ${difficulty.name} | 最終士氣: ${gameState.bossMorale}%</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 bg-indigo-900/30 p-6 rounded-2xl border border-indigo-500/30 text-left">
+                        <h3 class="text-indigo-400 font-bold mb-3 flex items-center">
+                            <span class="mr-2">💡</span> 辯論優化建議 (Tactical Advice)
+                        </h3>
+                        <ul class="list-disc pl-5 space-y-2 text-gray-300 text-sm leading-relaxed">
+                            ${debateSuggestions ? debateSuggestions.map(s => `<li>${parseText(s)}</li>`).join('') : '<li>無具體建議</li>'}
+                        </ul>
+                    </div>
+
+                    <button onclick="window.location.reload()" class="mt-10 soft-btn px-10 py-5 text-xl font-bold shadow-xl">
+                        重新啟動系統 (REBOOT)
+                    </button>
+                </div>
+            `;
+            stages[5].innerHTML = html;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            stageDisplay = document.getElementById('current-stage-display');
+            gameContent = document.getElementById('game-container');
+            loadingState = document.getElementById('loading-state');
+            errorState = document.getElementById('error-state');
+            errorMessageDetail = document.getElementById('error-message-detail');
+            loadingMessage = document.getElementById('loading-message');
+            
+            stages = {
+                0: document.getElementById('stage-0'),
+                1: document.getElementById('stage-1'),
+                2: document.getElementById('stage-2'), 
+                3: document.getElementById('stage-3'), 
+                4: document.getElementById('stage-4'), 
+                5: document.getElementById('stage-5'), 
+            };
+
+            // Setup Listeners
+            document.getElementById('bgm-toggle').addEventListener('click', () => {
+                if (!isAudioInitialized) initializeAudio();
+                else isBGMPlaying ? stopBGM() : startBGM();
+            });
+
+            document.getElementById('instructions-button').addEventListener('click', () => {
+                playClickSFX();
+                displayModal('遊戲說明與目標', 
+                    `<div class="space-y-4">
+                        <div class="bg-gray-700/30 p-3 rounded-xl">
+                            <h4 class="text-emerald-400 font-bold mb-1">Step 0: 選擇戰場</h4>
+                            <p class="text-sm">選擇一個你感興趣的爭議話題，或輸入一篇貼文。</p>
+                        </div>
+                        <div class="bg-gray-700/30 p-3 rounded-xl">
+                            <h4 class="text-emerald-400 font-bold mb-1">Step 1: 邏輯拆解 (事實/觀點)</h4>
+                            <p class="text-sm">分析文中的句子是事實或觀點，每答對一題可獲得 <strong class="text-yellow-300 font-bold">20 分</strong>的基礎分數。</p>
+                        </div>
+                        <div class="bg-gray-700/30 p-3 rounded-xl">
+                            <h4 class="text-emerald-400 font-bold mb-1">Step 2: 角色模擬</h4>
+                            <p class="text-sm">換位思考。扮演一個特定立場的角色，模擬發言。AI將以<strong class="text-red-400">極嚴格的標準</strong>評分你的模仿程度。</p>
+                        </div>
+                        <div class="bg-gray-700/30 p-3 rounded-xl">
+                            <h4 class="text-emerald-400 font-bold mb-1">Step 3: 輿論觀察</h4>
+                            <p class="text-sm">觀察場上不同角色的發言，蒐集情報，並複習關鍵術語。</p>
+                        </div>
+                        <div class="bg-gray-700/30 p-3 rounded-xl">
+                            <h4 class="text-red-400 font-bold mb-1">Step 4: 魔王戰 (鍵盤對峙)</h4>
+                            <p class="text-sm">面對一個「沒看內文就開噴」的酸民。目標是透過<strong class="text-red-400">邏輯反擊</strong>將其士氣降至零。回合模式下，達到難度設定的士氣削弱門檻即可獲勝。</p>
+                        </div>
+                        <div class="bg-gray-700/30 p-3 rounded-xl">
+                            <h4 class="text-purple-400 font-bold mb-1">Step 5: 結算</h4>
+                            <p class="text-sm">AI 裁判將綜合 F/O 表現和魔王戰結果，給出你的最終邏輯強度評分。</p>
+                        </div>
+                    </div>`);
+            });
+
+            if (!apiKey) {
+                renderApiKeyInput();
+                showStage(0);
+                return;
+            }
+
+            renderTopicSelection(); // Was renderStage0
+            showStage(0);
+        });
+    </script>
+</body>
+</html>
