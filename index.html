@@ -833,7 +833,7 @@
         async function generateRandomScenario(category) {
             playClickSFX();
             hideError();
-            toggleLoading(true, `AI 正在為您生成 **${category}** 類別中 有趣的、反諷的 爭議話題...`);
+            toggleLoading(true, `AI 正在為您生成 「${category}」 類別中，有趣的、反諷的爭議話題...`);
             try {
                 // 使用專屬的提示詞
                 const specificPrompt = TOPIC_PROMPTS[category] || TOPIC_PROMPTS["隨機生成"];
