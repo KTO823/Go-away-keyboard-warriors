@@ -239,7 +239,7 @@
             background-color: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
             display: flex; justify-content: center; align-items: center;
-            z-index: 50;
+            z-index: 9999; /* Ensure modal is on top */
         }
         .modal-content {
             background-color: #1e1e26;
@@ -296,8 +296,8 @@
 </head>
 <body class="min-h-screen p-3 md:p-6 flex items-center justify-center">
 
-    <!-- Loading State: Fixed Overlay (Optimized Position) -->
-    <div id="loading-state" class="fixed inset-0 z-[100] bg-gray-900/90 backdrop-blur-sm hidden flex flex-col items-center justify-center">
+    <!-- Loading State: Fixed Overlay (z-index 9999 to stay on top) -->
+    <div id="loading-state" class="fixed inset-0 z-[9999] bg-gray-900/90 backdrop-blur-sm hidden flex flex-col items-center justify-center">
         <div class="relative w-20 h-20 mb-6">
             <div class="w-full h-full border-4 border-emerald-500/30 rounded-full"></div>
             <div class="absolute top-0 left-0 w-full h-full border-4 border-emerald-500 rounded-full loader border-t-transparent"></div>
@@ -344,7 +344,7 @@
                 <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center tracking-wider uppercase">
                     <span class="mr-2">📄</span> Target Post (原貼文)
                 </h3>
-                <div id="scenario-content-display" class="p-4 rounded-lg bg-gray-900/50 border border-gray-700/50 max-h-48 overflow-y-auto text-base text-gray-200 leading-relaxed font-light">
+                <div id="scenario-content-display" class="p-4 rounded-lg bg-gray-900/50 border border-gray-700/50 max-h-48 overflow-y-auto text-base text-gray-200 leading-relaxed font-light whitespace-pre-wrap">
                     <!-- Content injected -->
                 </div>
             </div>
@@ -445,8 +445,8 @@
         function parseText(text) {
             if (!text) return '';
             // 確保 **文字** 轉為 HTML bold，且 ** 不再顯示
-            return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-yellow-400 font-bold">$1</strong>')
-                       .replace(/\n/g, '<br>');
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-yellow-400 font-bold">$1</strong>');
+                       // 注意：不自動轉 \n 為 <br>，因為我們使用 whitespace-pre-wrap
         }
 
         // ----------------------------------------------------
@@ -607,9 +607,8 @@
             const container = document.getElementById('scenario-display-container');
             const content = document.getElementById('scenario-content-display');
             if (show && gameState.scenario) {
-                // Remove ** from display as well if any remain, though parseText handles bolding.
-                // The main removal is done at generation time.
-                const opContent = gameState.scenario.split('\n\n')[1] || gameState.scenario;
+                // FIXED: Display the ENTIRE scenario content without splitting
+                const opContent = gameState.scenario;
                 content.innerHTML = parseText(opContent);
                 container.classList.remove('hidden');
             } else {
@@ -780,12 +779,12 @@
             hideError();
             const html = `
                 <div class="card p-8 arena-bg max-w-lg mx-auto text-center">
-                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">-啟動系統-</h2>
+                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">🚀 啟動系統</h2>
                     <p class="text-gray-400 mb-6 text-sm">請輸入您的 Gemini API Key 以啟動辯論系統。</p>
                     
                     <!-- NEW: API Key Instruction Block -->
                     <div class="mb-6 text-left bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-                        <h3 class="text-emerald-400 font-bold mb-2 text-sm">如何取得 API Key？</h3>
+                        <h3 class="text-emerald-400 font-bold mb-2 text-sm">🔑 如何取得 API Key？</h3>
                         <ol class="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                             <li>前往 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline">Google AI Studio</a></li>
                             <li>登入您的 Google 帳號</li>
@@ -828,13 +827,13 @@
             "生活時事": "請生成一篇關於交通亂象、物價通膨或食品安全的民生抱怨貼文...",
             "科技趨勢": "請生成一篇關於AI取代人類工作、個資隱私或科技巨頭壟斷的科技焦慮貼文...",
             "娛樂八卦": "請生成一篇關於當紅明星醜聞、網紅翻車或娛樂圈潛規則的八卦爆料貼文...",
-            "隨機生成": "請生成一篇關於熱門時事的爭議性貼文...，不限各種類型。",
+            "隨機生成": "請生成一篇關於熱門時事的爭議性貼文...",
         };
 
         async function generateRandomScenario(category) {
             playClickSFX();
             hideError();
-            toggleLoading(true, `AI 正在為您生成 「${category}」 類別中，有趣的、反諷的 爭議話題...`);
+            toggleLoading(true, `AI 正在為您生成 **${category}** 類別中 有趣的、反諷的 爭議話題...`);
             try {
                 // 使用專屬的提示詞
                 const specificPrompt = TOPIC_PROMPTS[category] || TOPIC_PROMPTS["隨機生成"];
