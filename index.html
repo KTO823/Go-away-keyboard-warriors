@@ -780,12 +780,12 @@
             hideError();
             const html = `
                 <div class="card p-8 arena-bg max-w-lg mx-auto text-center">
-                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">🚀 啟動系統</h2>
+                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">-啟動系統-</h2>
                     <p class="text-gray-400 mb-6 text-sm">請輸入您的 Gemini API Key 以啟動辯論系統。</p>
                     
                     <!-- NEW: API Key Instruction Block -->
                     <div class="mb-6 text-left bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-                        <h3 class="text-emerald-400 font-bold mb-2 text-sm">🔑 如何取得 API Key？</h3>
+                        <h3 class="text-emerald-400 font-bold mb-2 text-sm">如何取得 API Key？</h3>
                         <ol class="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                             <li>前往 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline">Google AI Studio</a></li>
                             <li>登入您的 Google 帳號</li>
@@ -828,13 +828,13 @@
             "生活時事": "請生成一篇關於交通亂象、物價通膨或食品安全的民生抱怨貼文...",
             "科技趨勢": "請生成一篇關於AI取代人類工作、個資隱私或科技巨頭壟斷的科技焦慮貼文...",
             "娛樂八卦": "請生成一篇關於當紅明星醜聞、網紅翻車或娛樂圈潛規則的八卦爆料貼文...",
-            "隨機生成": "請生成一篇關於熱門時事的爭議性貼文...",
+            "隨機生成": "請生成一篇關於熱門時事的爭議性貼文...，不限各種類型。",
         };
 
         async function generateRandomScenario(category) {
             playClickSFX();
             hideError();
-            toggleLoading(true, `AI 正在為您生成 **${category}** 類別中 有趣的、反諷的 爭議話題...`);
+            toggleLoading(true, `AI 正在為您生成 「${category}」 類別中，有趣的、反諷的 爭議話題...`);
             try {
                 // 使用專屬的提示詞
                 const specificPrompt = TOPIC_PROMPTS[category] || TOPIC_PROMPTS["隨機生成"];
