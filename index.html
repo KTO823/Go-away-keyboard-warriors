@@ -296,6 +296,15 @@
 </head>
 <body class="min-h-screen p-3 md:p-6 flex items-center justify-center">
 
+    <!-- Loading State: Fixed Overlay (Optimized Position) -->
+    <div id="loading-state" class="fixed inset-0 z-[100] bg-gray-900/90 backdrop-blur-sm hidden flex flex-col items-center justify-center">
+        <div class="relative w-20 h-20 mb-6">
+            <div class="w-full h-full border-4 border-emerald-500/30 rounded-full"></div>
+            <div class="absolute top-0 left-0 w-full h-full border-4 border-emerald-500 rounded-full loader border-t-transparent"></div>
+        </div>
+        <p id="loading-message" class="text-emerald-400 text-xl font-bold tracking-widest animate-pulse text-center px-4">AI 正在運算中...</p>
+    </div>
+
     <div id="game-container" class="w-full max-w-5xl arena-bg rounded-3xl shadow-2xl p-6 md:p-10 border-t-4 border-emerald-400">
         
         <!-- Header -->
@@ -320,12 +329,13 @@
         </header>
 
         <!-- Error Alert -->
-        <div id="error-state" class="hidden card p-4 mb-6 text-red-300 border-red-500/50 border bg-red-900/10 flex items-center rounded-xl">
+        <div id="error-state" class="hidden card p-4 mb-6 text-red-300 border-red-500/50 border bg-red-900/10 flex items-center rounded-xl animate-pulse">
             <span class="text-2xl mr-3">⚠️</span>
             <div>
                 <p class="font-bold">連線中斷</p>
                 <p id="error-message-detail" class="text-sm opacity-80">請檢查網路或 API 設定。</p>
             </div>
+            <button onclick="hideError()" class="ml-auto bg-red-900/50 hover:bg-red-800 text-white px-3 py-1 rounded text-xs">關閉</button>
         </div>
 
         <!-- Sticky Scenario (Persistent) -->
@@ -361,15 +371,6 @@
 
             <!-- Stage 5: Evaluation -->
             <div id="stage-5" class="hidden"></div>
-
-            <!-- Loading - 加了轉圈圈 -->
-            <div id="loading-state" class="hidden flex flex-col items-center justify-center h-64 py-12">
-                <div class="relative w-16 h-16 mb-6">
-                    <div class="w-full h-full border-4 border-emerald-500/30 rounded-full"></div>
-                    <div class="absolute top-0 left-0 w-full h-full border-4 border-emerald-500 rounded-full loader border-t-transparent"></div>
-                </div>
-                <p id="loading-message" class="text-emerald-400 font-medium tracking-widest animate-pulse">AI 正在運算中...</p>
-            </div>
             
         </div>
 
@@ -582,10 +583,18 @@
 
         function displayError(message) {
             if (errorState && errorMessageDetail) {
+                let displayMsg = message;
+                // 更友善的 429 錯誤訊息
+                if (message.includes("429")) {
+                    displayMsg = "系統繁忙 (429)：請求過於頻繁，請稍候再試。";
+                } else if (message.includes("API Key Error")) {
+                    displayMsg = "API Key 無效或未啟用，請檢查您的金鑰設定。";
+                }
+                
                 errorState.classList.remove('hidden');
-                errorMessageDetail.textContent = message;
-                document.getElementById('game-content').classList.add('hidden'); 
-                loadingState.classList.add('hidden');
+                errorMessageDetail.textContent = displayMsg;
+                document.getElementById('game-content').classList.remove('hidden'); // 確保背景內容可見
+                toggleLoading(false); // 確保 Loading 消失
                 playFailureSFX();
             }
         }
@@ -598,6 +607,8 @@
             const container = document.getElementById('scenario-display-container');
             const content = document.getElementById('scenario-content-display');
             if (show && gameState.scenario) {
+                // Remove ** from display as well if any remain, though parseText handles bolding.
+                // The main removal is done at generation time.
                 const opContent = gameState.scenario.split('\n\n')[1] || gameState.scenario;
                 content.innerHTML = parseText(opContent);
                 container.classList.remove('hidden');
@@ -636,9 +647,14 @@
         }
 
         function toggleLoading(show, message = 'AI 運算中...') {
-            if (loadingState && document.getElementById('game-content')) {
-                loadingState.classList.toggle('hidden', !show);
-                document.getElementById('game-content').classList.toggle('hidden', show); 
+            if (loadingState) {
+                if (show) {
+                    loadingState.classList.remove('hidden');
+                    loadingState.classList.add('flex');
+                } else {
+                    loadingState.classList.add('hidden');
+                    loadingState.classList.remove('flex');
+                }
                 loadingMessage.textContent = message;
             }
         }
@@ -724,15 +740,22 @@
         // ----------------------------------------------------
         // 5. API Fetch
         // ----------------------------------------------------
-        async function fetchWithRetry(url, options, maxRetries = 3) {
+        async function fetchWithRetry(url, options, maxRetries = 5) { // 增加重試次數至 5
             for (let i = 0; i < maxRetries; i++) {
                 try {
                     const response = await fetch(url, options);
                     if (response.ok) return response;
+                    
+                    // 特別處理 429，允許重試
+                    if (response.status === 429) {
+                         throw new Error("429"); 
+                    }
+                    
                     if (response.status === 403 || response.status === 401) throw new Error("API Key Error");
                     throw new Error(`Error: ${response.status}`);
                 } catch (error) {
                     if (i === maxRetries - 1) throw error;
+                    // 指數退避策略：1s, 2s, 4s, 8s, 16s
                     await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
                 }
             }
@@ -787,15 +810,33 @@
             });
         }
 
+        // 定義各分類的專屬 Prompt
+        const TOPIC_PROMPTS = {
+            "世界時事": "請生成一篇關於當前重大國際地緣政治衝突或全球經濟危機的爭議性貼文...",
+            "社會議題": "請生成一篇關於世代對立、居住正義或性別平權的激烈爭議貼文...",
+            "生活時事": "請生成一篇關於交通亂象、物價通膨或食品安全的民生抱怨貼文...",
+            "科技趨勢": "請生成一篇關於AI取代人類工作、個資隱私或科技巨頭壟斷的科技焦慮貼文...",
+            "娛樂八卦": "請生成一篇關於當紅明星醜聞、網紅翻車或娛樂圈潛規則的八卦爆料貼文...",
+            "隨機生成": "請生成一篇關於熱門時事的爭議性貼文...",
+        };
+
         async function generateRandomScenario(category) {
             playClickSFX();
             hideError();
-            toggleLoading(true, `AI 正在為您生成 **${category}** 類別中 有趣的、反諷的 爭議話題...`);
+            toggleLoading(true, `AI 正在為您生成 「${category}」 類別中 有趣的、反諷的 爭議話題...`);
             try {
-                const prompt = `請生成一個關於${category}的爭議性貼文(Threads/Dcard風格)。內容需帶有有趣或反諷的風格。150字左右。提供標題和內容。`;
+                // 使用專屬的提示詞
+                const specificPrompt = TOPIC_PROMPTS[category] || TOPIC_PROMPTS["隨機生成"];
+                const prompt = `${specificPrompt} 內容需帶有有趣或反諷的風格。150字左右。提供標題和內容。請輸出純文字內容，絕對不要使用Markdown格式（如**粗體**），請給我乾淨的純文本。`;
+                
                 const payload = createPayload(prompt, randomScenarioSchema, true);
                 const aiResult = await apiCall(payload);
-                gameState.scenario = `${aiResult.postTitle}\n\n${aiResult.postContent}`;
+                
+                // 再次過濾任何殘留的 ** 符號
+                const cleanTitle = aiResult.postTitle.replace(/\*\*/g, '');
+                const cleanContent = aiResult.postContent.replace(/\*\*/g, '');
+                
+                gameState.scenario = `${cleanTitle}\n\n${cleanContent}`;
                 gameState.scenarioCategory = category;
                 
                 document.getElementById('scenario-input').value = gameState.scenario;
@@ -843,7 +884,7 @@
                 btn.addEventListener('click', () => {
                     initializeAudio();
                     const cat = btn.getAttribute('data-category');
-                    generateRandomScenario(cat === '隨機生成' ? '熱門議題' : cat);
+                    generateRandomScenario(cat);
                 });
             });
 
