@@ -780,9 +780,20 @@
             hideError();
             const html = `
                 <div class="card p-8 arena-bg max-w-lg mx-auto text-center">
-                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">-啟動系統-</h2>
+                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">🚀 啟動系統</h2>
                     <p class="text-gray-400 mb-6 text-sm">請輸入您的 Gemini API Key 以啟動辯論系統。</p>
                     
+                    <!-- NEW: API Key Instruction Block -->
+                    <div class="mb-6 text-left bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                        <h3 class="text-emerald-400 font-bold mb-2 text-sm">🔑 如何取得 API Key？</h3>
+                        <ol class="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                            <li>前往 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline">Google AI Studio</a></li>
+                            <li>登入您的 Google 帳號</li>
+                            <li>點擊 <strong>Create API key</strong> 按鈕</li>
+                            <li>將生成的 Key 複製並貼入下方欄位</li>
+                        </ol>
+                    </div>
+
                     <div class="mb-6 relative">
                         <input type="password" id="api-key-input-field" 
                             class="w-full p-4 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition shadow-inner text-center font-mono placeholder-gray-600"
@@ -823,7 +834,7 @@
         async function generateRandomScenario(category) {
             playClickSFX();
             hideError();
-            toggleLoading(true, `AI 正在為您生成 「${category}」 類別中 有趣的、反諷的 爭議話題...`);
+            toggleLoading(true, `AI 正在為您生成 **${category}** 類別中 有趣的、反諷的 爭議話題...`);
             try {
                 // 使用專屬的提示詞
                 const specificPrompt = TOPIC_PROMPTS[category] || TOPIC_PROMPTS["隨機生成"];
