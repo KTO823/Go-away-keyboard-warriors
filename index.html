@@ -14,7 +14,7 @@
     
     <script defer>
         // ----------------------------------------------------------------------
-        // API Key 設定 (改為變數，等待使用者輸入)
+        // API Key 設定
         // ----------------------------------------------------------------------
         let apiKey = ""; 
         
@@ -38,18 +38,18 @@
         
         window.db = null;
         window.auth = null;
-        window.userId = 'Loading...'; 
+        window.userId = '載入中...'; 
         
         window.firebaseSetup = async () => {
             if (typeof firebase === 'undefined' || typeof firebase.initializeApp === 'undefined') {
-                window.userId = 'SDK Error';
+                window.userId = 'SDK 錯誤';
                 updateUserDisplay();
                 return;
             }
 
             try {
                 if (Object.keys(firebaseConfig).length === 0) {
-                    window.userId = 'Anonymous (No DB)';
+                    window.userId = '訪客模式';
                     updateUserDisplay();
                     return;
                 }
@@ -60,291 +60,426 @@
 
                 firebase.auth(app).onAuthStateChanged(async (user) => {
                     if (user) {
-                        window.userId = user.uid;
+                        window.userId = user.uid.substring(0, 8).toUpperCase();
                     } else {
                         try {
                             if (initialAuthToken) {
                                 const userCredential = await firebase.auth(app).signInWithCustomToken(initialAuthToken);
-                                window.userId = userCredential.user.uid;
+                                window.userId = userCredential.user.uid.substring(0, 8).toUpperCase();
                             } else {
                                 const userCredential = await firebase.auth(app).signInAnonymously();
-                                window.userId = userCredential.user.uid;
+                                window.userId = userCredential.user.uid.substring(0, 8).toUpperCase();
                             }
                         } catch (error) {
-                            window.userId = 'Auth Failed';
+                            window.userId = '驗證失敗';
                         }
                     }
                     updateUserDisplay();
                 });
             } catch (setupError) {
-                window.userId = 'Setup Failed';
+                window.userId = '設定失敗';
                 updateUserDisplay();
             }
         };
 
         function updateUserDisplay() {
             const idDisplayEl = document.getElementById('user-id-display');
-            if(idDisplayEl) { idDisplayEl.textContent = `使用者 ID: ${window.userId}`; }
+            if(idDisplayEl) { idDisplayEl.textContent = `ID: ${window.userId}`; }
         }
 
         window.firebaseSetup();
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Noto+Sans+TC:wght@300;500;700&display=swap');
+        /* 字體：現代圓潤無襯線體 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Nunito:wght@400;600;700;800&display=swap');
         
-        /* 基礎樣式 - 更加柔和協調 */
-        body {
-            font-family: 'Noto Sans TC', 'Nunito', sans-serif;
-            background-color: #121218; 
-            color: #e4e4e7;
-            /* 柔和的背景光暈 */
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15), transparent 25%);
-            background-attachment: fixed;
-        }
-        
-        .arena-bg {
-            background: rgba(30, 30, 40, 0.7);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.08);
+        :root {
+            /* 柔和科技配色 - 統一色調 */
+            --bg-deep: #0b1120;       /* 更深的 Slate */
+            --panel-bg: rgba(30, 41, 59, 0.4); 
+            
+            --accent-primary: #10b981; /* Emerald */
+            --accent-glow: rgba(16, 185, 129, 0.5);
+            
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+            
+            --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+            --glass-shine: 1px solid rgba(255, 255, 255, 0.15);
         }
 
-        /* 卡片樣式：圓潤、柔和陰影 */
+        body {
+            font-family: 'Nunito', 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 背景動態光暈 - 模擬極光/深海光 */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            width: 60vw;
+            height: 60vw;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.15;
+            z-index: -1;
+            animation: floatLight 20s infinite alternate ease-in-out;
+        }
+        body::before {
+            background: radial-gradient(circle, #10b981, transparent 70%);
+            top: -10%;
+            left: -10%;
+        }
+        body::after {
+            background: radial-gradient(circle, #3b82f6, transparent 70%); /* Blue hint */
+            bottom: -10%;
+            right: -10%;
+            animation-delay: -10s;
+        }
+
+        @keyframes floatLight {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(10%, 10%) scale(1.1); }
+        }
+
+        /* 標題與重點文字 - 加強光暈 */
+        h1, h2, h3 {
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.3); /* 柔和綠光 */
+        }
+
+        /* 主容器：玻璃擬態 + 邊緣光 */
+        .arena-bg {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: var(--glass-border);
+            border-top: var(--glass-shine); /* 頂部高光 */
+            border-left: var(--glass-shine); /* 左側高光 */
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.6), 
+                0 0 40px rgba(16, 185, 129, 0.05); /* 外部微光 */
+            border-radius: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 容器內部的微弱網格紋理 */
+        .arena-bg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            opacity: 0.5;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0));
+        }
+
+        /* 卡片樣式：懸浮光感 */
         .card {
-            background-color: rgba(40, 40, 55, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 1rem; /* 柔和圓角 */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.25rem;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            z-index: 10;
         }
         .card:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.15); /* 綠色光暈 */
+            transform: translateY(-4px);
         }
         
-        /* 按鈕樣式：圓潤、漸層 */
-        .soft-btn {
+        /* 按鈕基礎 - 玻璃質感 */
+        .btn-base {
             transition: all 0.3s ease;
-            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-            color: #064e3b;
+            border-radius: 1rem;
             font-weight: 700;
-            border-radius: 0.75rem; 
-            border: none;
-            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+            letter-spacing: 0.05em;
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid transparent;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-base::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(255,255,255,0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .btn-base:hover::after { opacity: 1; }
+        .btn-base:active:not(:disabled) { transform: scale(0.98); }
+        .btn-base:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.8); }
+
+        /* 主要按鈕 (Emerald Glow) */
+        .soft-btn {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            border-top: 1px solid rgba(52, 211, 153, 0.4);
+            color: #ecfdf5;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
         }
         .soft-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 12px rgba(16, 185, 129, 0.4);
-            filter: brightness(1.1);
-        }
-        .soft-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            filter: grayscale(0.8);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
+            text-shadow: 0 0 8px rgba(255,255,255,0.5);
         }
         
+        /* 次要按鈕 (Indigo Glow) */
         .soft-btn-secondary {
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            color: white;
-            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #e0e7ff;
         }
         .soft-btn-secondary:hover:not(:disabled) {
-            box-shadow: 0 8px 12px rgba(79, 70, 229, 0.4);
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #818cf8;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+            color: white;
         }
 
+        /* 危險按鈕 (Red Glow) */
         .soft-btn-danger {
-            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+            background: rgba(127, 29, 29, 0.4);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+            color: #ffe4e6;
+        }
+        .soft-btn-danger:hover:not(:disabled) {
+            background: rgba(225, 29, 72, 0.2);
+            border-color: #fb7185;
+            box-shadow: 0 0 15px rgba(244, 63, 94, 0.3);
             color: white;
-            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
         }
         
-        .soft-btn-difficulty {
-            background: rgba(60, 60, 70, 0.5);
-            border: 2px solid transparent;
-        }
-        .soft-btn-difficulty.selected {
-            background: rgba(79, 70, 229, 0.3);
-            border-color: #6366f1;
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
-        }
-
-        /* 說明與音樂按鈕 */
+        /* 小工具按鈕 (Halo Effect) */
         .util-btn {
-            border-radius: 50%;
-            width: 3rem;
-            height: 3rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            font-weight: bold;
-            font-size: 1.2rem;
+            border-radius: 50%; width: 3rem; height: 3rem;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-sub);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s;
         }
         .util-btn:hover {
+            background: var(--text-main);
+            color: var(--bg-deep);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
             transform: scale(1.1);
         }
 
-        /* 動畫 */
-        .character-enter {
-            animation: floatUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        
-        .emoji-icon {
-            display: inline-block;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        }
-        
-        .dialog-bubble {
-            transform: scale(0.95);
-            opacity: 0;
-            animation: softPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-            border-radius: 1rem;
-            border-bottom-left-radius: 0.2rem;
-        }
-        @keyframes softPop {
-            to { transform: scale(1); opacity: 1; }
-        }
-        
-        @keyframes floatUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .stage-transition {
-            animation: floatUp 0.6s ease-out forwards;
-        }
-
-        /* 辯論紀錄 */
-        .log-entry-user { animation: slideLeft 0.4s ease-out forwards; }
-        .log-entry-boss { animation: slideRight 0.4s ease-out forwards; }
-        @keyframes slideLeft { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
-        @keyframes slideRight { from { opacity:0; transform:translateX(10px); } to { opacity:1; transform:translateX(0); } }
-
-        /* 士氣條 */
-        #boss-morale-bar-fill {
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .strike-through {
-            text-decoration: line-through;
-        }
-
-        /* Modal */
-        .modal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px);
+        /* 彈出視窗 (Modal) - 聚焦光效 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(5, 10, 20, 0.85); /* 很深的背景 */
+            backdrop-filter: blur(12px);
+            z-index: 9999;
             display: flex; justify-content: center; align-items: center;
-            z-index: 9999; /* Ensure modal is on top */
+            animation: fadeIn 0.4s ease-out;
         }
+        
         .modal-content {
-            background-color: #1e1e26;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(16, 185, 129, 0.3); /* 綠色邊框光 */
+            box-shadow: 0 0 50px rgba(16, 185, 129, 0.15); /* 大範圍光暈 */
+            border-radius: 2rem;
             padding: 2.5rem;
-            border-radius: 1.5rem;
-            max-width: 90%; width: 650px;
+            max-width: 90%; width: 600px;
             max-height: 85vh; overflow-y: auto;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: floatUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        strong {
-            color: #fbbf24;
-            font-weight: 700;
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes floatUp { 
+            from { opacity: 0; transform: translateY(20px) scale(0.95); } 
+            to { opacity: 1; transform: translateY(0) scale(1); } 
         }
         
-        /* 滾動條美化 */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0; transform: translateY(15px);
         }
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Loading Spinner Animation */
-        .loader {
-            border-top-color: transparent;
-            animation: spinner 0.8s linear infinite;
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* 對話氣泡 - 發光邊緣 */
+        .dialog-bubble {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-left: 3px solid var(--accent-primary); /* 左側發光條 */
+            border-radius: 1rem; border-top-left-radius: 2px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
 
-        @keyframes spinner {
-            to { transform: rotate(360deg); }
+        /* 輸入框樣式 - 內發光 */
+        input, textarea {
+            background: rgba(2, 6, 23, 0.5) !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+            border-radius: 1rem !important;
+            color: var(--text-main) !important;
+            font-family: inherit !important;
+            transition: all 0.3s;
         }
-        
-        /* Glossary term style */
+        input:focus, textarea:focus {
+            outline: none !important;
+            border-color: var(--accent-primary) !important;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+            background: rgba(2, 6, 23, 0.8) !important;
+        }
+
+        /* 關鍵字標籤 */
         .glossary-term {
-            cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none; /* remove underline by default */
+            background: rgba(16, 185, 129, 0.1);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 4px 12px; border-radius: 999px;
+            font-size: 0.85em; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 0 5px rgba(16, 185, 129, 0);
         }
         .glossary-term:hover {
-            filter: brightness(1.2);
-            text-decoration: underline;
+            background: rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); /* 發光 */
+            border-color: #34d399;
+            color: #fff;
         }
+        
+        /* 難度選擇按鈕 - 柔和科技風格 */
+        .soft-btn-difficulty {
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-sub);
+            border-radius: 1rem;
+            transition: all 0.3s;
+        }
+        .soft-btn-difficulty:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: var(--text-main);
+        }
+        .soft-btn-difficulty.selected {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+        }
+
+        strong { color: #fcd34d; font-weight: 700; text-shadow: 0 0 10px rgba(252, 211, 77, 0.3); }
+        .text-accent { color: var(--accent-primary); }
+        
+        /* 滾動條 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.5); }
+
+        /* Loading Spinner - 能量環 */
+        .loader {
+            border: 4px solid rgba(16, 185, 129, 0.1);
+            border-top-color: #34d399;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            filter: drop-shadow(0 0 8px #34d399);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
     </style>
 </head>
-<body class="min-h-screen p-3 md:p-6 flex items-center justify-center">
+<body class="min-h-screen p-4 flex items-center justify-center">
 
-    <!-- Loading State: Fixed Overlay (z-index 9999 to stay on top) -->
-    <div id="loading-state" class="fixed inset-0 z-[9999] bg-gray-900/90 backdrop-blur-sm hidden flex flex-col items-center justify-center">
-        <div class="relative w-20 h-20 mb-6">
-            <div class="w-full h-full border-4 border-emerald-500/30 rounded-full"></div>
-            <div class="absolute top-0 left-0 w-full h-full border-4 border-emerald-500 rounded-full loader border-t-transparent"></div>
+    <!-- Introduction Modal -->
+    <div id="intro-modal" class="modal-overlay hidden">
+        <div class="modal-content text-center">
+            <div class="mb-8 relative">
+                <!-- 光效裝飾 -->
+                <div class="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full -z-10"></div>
+                <div class="text-7xl mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">🛡️</div>
+                <h2 class="text-3xl font-black text-white mb-1 tracking-tight">歡迎來到「鍵盤戰場」</h2>
+                <p class="text-emerald-400 text-sm font-bold tracking-[0.3em] uppercase">Logic Defense System v2.0</p>
+            </div>
+
+            <div class="space-y-6 text-slate-300 text-left bg-slate-900/40 p-8 rounded-3xl border border-white/5 backdrop-blur-md">
+                <p class="leading-relaxed text-lg">
+                    社群時代，<strong class="text-amber-400">邏輯已死，情緒當道</strong>。<br>
+                    你是碩果僅存的「邏輯防衛者」，任務是淨化這個充滿謬誤的數位世界。
+                </p>
+                <div class="grid gap-3 text-sm">
+                    <div class="flex items-center p-3 rounded-xl bg-white/5 border border-white/5 hover:border-emerald-500/30 transition-colors">
+                        <span class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold mr-4">1</span>
+                        <span><strong>邏輯拆解</strong>：區分事實與觀點。</span>
+                    </div>
+                    <div class="flex items-center p-3 rounded-xl bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-colors">
+                        <span class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold mr-4">2</span>
+                        <span><strong>角色模擬</strong>：換位思考，模仿不同立場。</span>
+                    </div>
+                    <div class="flex items-center p-3 rounded-xl bg-white/5 border border-white/5 hover:border-rose-500/30 transition-colors">
+                        <span class="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold mr-4">3</span>
+                        <span><strong>魔王對決</strong>：擊潰無視內文的酸民。</span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="close-intro-btn" class="mt-8 soft-btn btn-base py-4 px-12 text-xl w-full shadow-emerald-500/20 hover:scale-[1.02] transform transition">
+                進入戰場
+            </button>
         </div>
-        <p id="loading-message" class="text-emerald-400 text-xl font-bold tracking-widest animate-pulse text-center px-4">AI 正在運算中...</p>
     </div>
 
-    <div id="game-container" class="w-full max-w-5xl arena-bg rounded-3xl shadow-2xl p-6 md:p-10 border-t-4 border-emerald-400">
+    <!-- Loading State -->
+    <div id="loading-state" class="modal-overlay hidden flex-col">
+        <div class="relative w-20 h-20 mb-6">
+            <div class="w-full h-full loader"></div>
+        </div>
+        <p id="loading-message" class="text-emerald-300 text-xl font-bold tracking-widest animate-pulse drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]">AI 運算中...</p>
+    </div>
+
+    <div id="game-container" class="w-full max-w-5xl arena-bg p-6 md:p-12 relative">
         
         <!-- Header -->
-        <header class="mb-8 flex flex-col md:flex-row justify-between items-center relative border-b border-gray-700/50 pb-6">
+        <header class="mb-10 flex flex-col md:flex-row justify-between items-center relative border-b border-white/10 pb-8">
             <div class="text-center md:text-left">
-                <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 tracking-tight mb-2">
-                    <span class="emoji-icon">🧠</span> 鍵盤大戰 <span class="text-gray-500 font-light text-2xl mx-2">|</span> 酸民走開
+                <h1 class="text-4xl md:text-5xl font-black text-white tracking-tighter mb-3 drop-shadow-md">
+                    <span class="mr-2">🧠</span> 鍵盤大戰 <span class="text-slate-600 font-thin text-3xl mx-3">|</span> <span class="text-slate-200">酸民走開</span>
                 </h1>
-                <p id="current-stage-display" class="text-sm font-medium text-gray-400 tracking-wider">系統準備就緒</p>
-                <p id="user-id-display" class="text-xs text-gray-600 mt-1 font-mono">ID: ...</p>
+                <div class="flex items-center justify-center md:justify-start gap-4 mt-2">
+                    <span id="current-stage-display" class="bg-emerald-500/10 text-emerald-400 px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">系統就緒</span>
+                    <p id="user-id-display" class="text-xs text-slate-500 font-mono tracking-wider">ID: ...</p>
+                </div>
             </div>
 
             <!-- Tools -->
-            <div class="flex space-x-3 mt-4 md:mt-0">
-                <button id="bgm-toggle" class="util-btn bg-gray-700 text-pink-400 hover:bg-gray-600 hover:text-pink-300" aria-label="Toggle BGM">
+            <div class="flex space-x-4 mt-6 md:mt-0">
+                <button id="bgm-toggle" class="util-btn" aria-label="Toggle BGM" title="背景音樂">
                     ♫
                 </button>
-                <button id="instructions-button" class="util-btn bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/30" aria-label="Instructions">
-                    ❔
+                <button id="instructions-button" class="util-btn" aria-label="Instructions" title="說明">
+                    ?
                 </button>
             </div>
         </header>
 
-        <!-- Error Alert -->
-        <div id="error-state" class="hidden card p-4 mb-6 text-red-300 border-red-500/50 border bg-red-900/10 flex items-center rounded-xl animate-pulse">
-            <span class="text-2xl mr-3">⚠️</span>
-            <div>
-                <p class="font-bold">連線中斷</p>
-                <p id="error-message-detail" class="text-sm opacity-80">請檢查網路或 API 設定。</p>
-            </div>
-            <button onclick="hideError()" class="ml-auto bg-red-900/50 hover:bg-red-800 text-white px-3 py-1 rounded text-xs">關閉</button>
-        </div>
+        <!-- (Legacy Error - now handled by Modal) -->
+        <div id="error-state" class="hidden"></div>
 
         <!-- Sticky Scenario (Persistent) -->
-        <div id="scenario-display-container" class="hidden mb-8 transition-all duration-500">
-            <div class="card p-5 border-l-4 border-emerald-500 bg-gray-800/40 backdrop-blur-sm rounded-xl">
-                <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center tracking-wider uppercase">
-                    <span class="mr-2">📄</span> Target Post (原貼文)
+        <div id="scenario-display-container" class="hidden mb-10 fade-in-up">
+            <div class="bg-slate-900/40 border border-slate-700/50 rounded-3xl p-6 relative overflow-hidden group hover:border-slate-600/80 transition-colors">
+                <!-- 左側發光裝飾 -->
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-emerald-400 to-transparent shadow-[0_0_15px_#34d399]"></div>
+                
+                <h3 class="text-sm font-bold text-emerald-400 mb-4 flex items-center tracking-wide uppercase">
+                    <span class="mr-3 text-xl bg-emerald-500/20 w-8 h-8 rounded-lg flex items-center justify-center">📄</span> 目前議題 (Target Post)
                 </h3>
-                <div id="scenario-content-display" class="p-4 rounded-lg bg-gray-900/50 border border-gray-700/50 max-h-48 overflow-y-auto text-base text-gray-200 leading-relaxed font-light whitespace-pre-wrap">
+                <div id="scenario-content-display" class="p-5 bg-black/20 rounded-2xl border border-white/5 max-h-56 overflow-y-auto text-lg text-slate-300 leading-relaxed whitespace-pre-wrap font-medium shadow-inner">
                     <!-- Content injected -->
                 </div>
             </div>
@@ -352,7 +487,7 @@
 
 
         <!-- Game Content Area -->
-        <div id="game-content" class="min-h-[400px]">
+        <div id="game-content" class="min-h-[300px]">
             
             <!-- Stage 0: Setup -->
             <div id="stage-0" class="space-y-6"></div>
@@ -360,58 +495,60 @@
             <!-- Stage 1: Logic Analysis -->
             <div id="stage-1" class="hidden"></div>
 
-            <!-- Stage 2: Role Simulation -->
+            <!-- Stage 2: Logic Result (Review) -->
             <div id="stage-2" class="hidden"></div>
 
-            <!-- Stage 3: Community Observation -->
+            <!-- Stage 3: Role Simulation (Role Play) -->
             <div id="stage-3" class="hidden"></div>
 
-            <!-- Stage 4: Boss Battle -->
+            <!-- Stage 4: Community Observation -->
             <div id="stage-4" class="hidden"></div>
 
-            <!-- Stage 5: Evaluation -->
+            <!-- Stage 5: Boss Battle -->
             <div id="stage-5" class="hidden"></div>
+
+            <!-- Stage 6: Evaluation -->
+            <div id="stage-6" class="hidden"></div>
             
         </div>
 
     </div>
     
-    <!-- Modal -->
+    <!-- Modal Container for Dynamic Popups -->
     <div id="modal-container"></div>
 
     <script defer>
         // ----------------------------------------------------
         // 1. Config & Difficulty Settings
         // ----------------------------------------------------
-        // GEMINI_URL 將在 apiCall 中動態生成，因為 apiKey 現在是動態的
         
-        let MAX_DEBATE_ROUNDS = 4; // Default, will be dynamic
+        let MAX_DEBATE_ROUNDS = 4;
 
         // 難度設定
         const DIFFICULTY_SETTINGS = {
             EASY: {
                 key: 'EASY',
                 name: "鍵盤小屁孩",
-                description: "容易被情緒影響，邏輯薄弱。",
+                description: "口條差 / 一嗆就倒",
                 icon: "👶",
-                moraleMultiplier: 0.5, // 玩家傷害 x 2
-                winThreshold: 0.4 // 回合制模式中，士氣削弱 40% 即可判定勝利
+                moraleMultiplier: 0.4, // 受傷倍率高 (容易被扣士氣)
+                winThreshold: 0.3 // 門檻低
             },
             MEDIUM: {
                 key: 'MEDIUM',
                 name: "社群嘴砲王",
-                description: "有一定的反駁能力，邏輯戰力平均。",
+                description: "正常爭論 / 有來有往",
                 icon: "🗣️",
-                moraleMultiplier: 1.0, 
-                winThreshold: 0.6 // 士氣削弱 60%
+                moraleMultiplier: 0.7, // 原為 1.0，調低倍率讓玩家更容易造成傷害 (Damage = X / 0.7 = 1.4倍)
+                winThreshold: 0.6
             },
             HARD: {
                 key: 'HARD',
                 name: "專家辯論家",
-                description: "邏輯嚴謹，極難擊敗，士氣難以撼動。",
+                description: "一般辯論等級 / 邏輯嚴謹",
                 icon: "🧠",
-                moraleMultiplier: 1.5, // 玩家傷害 x 0.66
-                winThreshold: 0.8 // 士氣削弱 80%
+                moraleMultiplier: 1.5, // 受傷倍率低 (很難扣士氣)
+                winThreshold: 0.8 
             }
         };
 
@@ -438,34 +575,31 @@
             evaluation: null
         };
         
-        let stageDisplay, gameContent, loadingState, errorState, errorMessageDetail, loadingMessage;
+        let stageDisplay, gameContent, loadingState, errorState, loadingMessage;
         let stages = {};
 
-        // Helper: Markdown Bold 處理與換行
         function parseText(text) {
             if (!text) return '';
-            // 確保 **文字** 轉為 HTML bold，且 ** 不再顯示
-            return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-yellow-400 font-bold">$1</strong>');
-                       // 注意：不自動轉 \n 為 <br>，因為我們使用 whitespace-pre-wrap
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.5)]">$1</strong>');
         }
 
         // ----------------------------------------------------
-        // 2. Audio (Tone.js) - Smooth Ambient
+        // 2. Audio (Tone.js) - Soft Tech Ambient
         // ----------------------------------------------------
         
+        // Revert to softer sounds
         const synth = new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: "sine" }, // Softer sound
-            envelope: { attack: 0.05, decay: 0.2, sustain: 0.2, release: 1.5 }
+            oscillator: { type: "triangle" }, 
+            envelope: { attack: 0.05, decay: 0.1, sustain: 0.3, release: 1 }
         }).toDestination();
-        synth.volume.value = -5;
+        synth.volume.value = -6;
 
         const clickSynth = new Tone.MembraneSynth().toDestination();
         clickSynth.volume.value = -12;
 
-        // BGM
         const bgmPad = new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: "triangle" },
-            envelope: { attack: 1, decay: 1, sustain: 0.8, release: 3 }
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.5, decay: 0.5, sustain: 0.5, release: 2 }
         }).toDestination();
         bgmPad.volume.value = -15;
 
@@ -479,7 +613,7 @@
 
         function playSuccessSFX() {
             if (isAudioInitialized) {
-                synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n");
+                synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "8n");
             }
         }
 
@@ -505,16 +639,15 @@
             let chordIndex = 0;
 
             bgmLoop = new Tone.Loop(time => {
-                bgmPad.triggerAttackRelease(chords[chordIndex % chords.length], "2n", time);
+                bgmPad.triggerAttackRelease(chords[chordIndex % chords.length], "1n", time);
                 chordIndex++;
             }, "1n").start(0);
 
-            Tone.Transport.bpm.value = 60; // Slower, relaxed tempo
+            Tone.Transport.bpm.value = 65; // Relaxed tempo
             Tone.Transport.start();
             isBGMPlaying = true;
             document.getElementById('bgm-toggle').textContent = '⏸';
             document.getElementById('bgm-toggle').classList.add('text-emerald-400');
-            document.getElementById('bgm-toggle').classList.remove('text-pink-400');
         }
         
         function stopBGM() {
@@ -527,7 +660,6 @@
             isBGMPlaying = false;
             document.getElementById('bgm-toggle').textContent = '♫';
             document.getElementById('bgm-toggle').classList.remove('text-emerald-400');
-            document.getElementById('bgm-toggle').classList.add('text-pink-400');
         }
 
         async function initializeAudio() {
@@ -542,24 +674,24 @@
         }
         
         // ----------------------------------------------------
-        // 3. UI Helper
+        // 3. UI Helper & Error Handling (Updated)
         // ----------------------------------------------------
 
         function displayModal(title, content, actionButtons = '') {
             const modalContainer = document.getElementById('modal-container');
             modalContainer.innerHTML = `
-                <div class="modal" id="game-modal" onclick="if(event.target.id === 'game-modal') document.getElementById('modal-container').innerHTML = ''">
+                <div class="modal-overlay" id="game-modal" onclick="if(event.target.id === 'game-modal') document.getElementById('modal-container').innerHTML = ''">
                     <div class="modal-content" onclick="event.stopPropagation()">
-                        <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
-                            <h2 class="text-2xl font-bold text-white tracking-wide">${title}</h2>
-                            <button class="bg-gray-700 hover:bg-gray-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition" onclick="document.getElementById('modal-container').innerHTML = ''">
+                        <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                            <h2 class="text-3xl font-bold text-white tracking-tight drop-shadow-md">${title}</h2>
+                            <button class="bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center transition border border-white/5" onclick="document.getElementById('modal-container').innerHTML = ''">
                                 ✕
                             </button>
                         </div>
-                        <div class="text-gray-300 leading-relaxed font-light space-y-4">
+                        <div class="text-slate-300 leading-relaxed space-y-4 text-lg">
                             ${content}
                         </div>
-                        ${actionButtons ? `<div class="mt-6 pt-4 border-t border-gray-700 flex justify-end">${actionButtons}</div>` : `<div class="mt-6 pt-4 border-t border-gray-700 flex justify-end"><button class="soft-btn px-4 py-2 rounded-lg" onclick="document.getElementById('modal-container').innerHTML = ''">關閉</button></div>`}
+                        ${actionButtons ? `<div class="mt-8 pt-6 border-t border-white/10 flex justify-end gap-3">${actionButtons}</div>` : `<div class="mt-8 pt-6 border-t border-white/10 flex justify-end"><button class="soft-btn-secondary btn-base px-8 py-3 text-lg shadow-lg" onclick="document.getElementById('modal-container').innerHTML = ''">關閉</button></div>`}
                     </div>
                 </div>
             `;
@@ -570,36 +702,59 @@
             playClickSFX();
             const definition = gameState.glossary[term];
             if (definition) {
-                displayModal(`📚 術語定義: ${term}`, 
-                    `<p class="text-lg text-yellow-300 font-bold mb-3">${term}</p>
-                    <p>${parseText(definition)}</p>
-                    <p class="text-xs text-gray-500 mt-4 italic">此詞彙源於貼文分析或提示資訊。</p>`
+                displayModal(`📚 詞彙定義: ${term}`, 
+                    `<p class="text-2xl text-emerald-400 font-bold mb-4 drop-shadow-md">${term}</p>
+                    <p class="text-white text-lg bg-black/30 p-4 rounded-xl border border-white/10">${parseText(definition)}</p>
+                    <p class="text-xs text-slate-500 mt-4 italic">此資料源於 AI 自動分析。</p>`
                 );
             } else {
-                displayModal('錯誤', `<p>找不到詞彙 ${term} 的定義。</p>`);
+                displayModal('錯誤', `<p>找不到定義。</p>`);
             }
         };
 
-
+        // UPDATED: Error Handling with specific Modal for Quota Limits
         function displayError(message) {
-            if (errorState && errorMessageDetail) {
-                let displayMsg = message;
-                // 更友善的 429 錯誤訊息
-                if (message.includes("429")) {
-                    displayMsg = "系統繁忙 (429)：請求過於頻繁，請稍候再試。";
-                } else if (message.includes("API Key Error")) {
-                    displayMsg = "API Key 無效或未啟用，請檢查您的金鑰設定。";
-                }
-                
-                errorState.classList.remove('hidden');
-                errorMessageDetail.textContent = displayMsg;
-                document.getElementById('game-content').classList.remove('hidden'); // 確保背景內容可見
-                toggleLoading(false); // 確保 Loading 消失
-                playFailureSFX();
-            }
+            toggleLoading(false); // Stop spinner
+            playFailureSFX();
+
+            // Default to Quota Limit message if error seems related to API failure/limits
+            const criticalErrorContent = `
+                <div class="text-center p-6">
+                    <div class="text-6xl mb-6 filter drop-shadow-[0_0_15px_rgba(244,63,94,0.5)]">⚠️</div>
+                    <p class="text-rose-400 text-2xl font-bold mb-2">系統連線中斷</p>
+                    <p class="text-slate-400 mb-8 font-mono">錯誤代碼: ${message}</p>
+                    <div class="bg-rose-500/10 border border-rose-500/40 p-6 rounded-2xl mb-4 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+                        <p class="text-rose-200 font-bold text-lg">您的金鑰已達使用上限，請換一個金鑰繼續遊玩</p>
+                    </div>
+                </div>
+            `;
+
+            displayModal(
+                '連線錯誤',
+                criticalErrorContent,
+                `<button class="soft-btn-danger btn-base w-full py-4 text-xl shadow-xl hover:scale-[1.02]" onclick="resetGameSystem()">
+                    🔄 重設金鑰並重啟
+                </button>`
+            );
         }
         
+        // Function to reset game state and return to Stage 0
+        window.resetGameSystem = function() {
+            playClickSFX();
+            apiKey = "";
+            gameState.scenario = "";
+            document.getElementById('modal-container').innerHTML = ''; // Close modal
+            
+            // Clean inputs
+            const keyInput = document.getElementById('api-key-input-field');
+            if (keyInput) keyInput.value = "";
+            
+            renderApiKeyInput(); // Re-render Stage 0 UI
+            showStage(0); // Switch view
+        };
+
         function hideError() {
+            // Deprecated as we use modal now, but kept for safety
             if (errorState) errorState.classList.add('hidden');
         }
 
@@ -607,7 +762,6 @@
             const container = document.getElementById('scenario-display-container');
             const content = document.getElementById('scenario-content-display');
             if (show && gameState.scenario) {
-                // FIXED: Display the ENTIRE scenario content without splitting
                 const opContent = gameState.scenario;
                 content.innerHTML = parseText(opContent);
                 container.classList.remove('hidden');
@@ -617,14 +771,12 @@
         }
 
         function showStage(stage) {
-            // Hide prev
             const prev = stages[gameState.currentStage];
             if (prev) {
                 prev.classList.add('hidden');
                 prev.classList.remove('stage-transition');
             }
 
-            // Show new
             const next = stages[stage];
             if (next) {
                 next.classList.remove('hidden');
@@ -633,14 +785,15 @@
 
             gameState.currentStage = stage;
             const stageNames = {
-                0: '任務初始化', 
+                0: '初始化', 
                 1: '邏輯分析', 
-                2: '角色模擬', 
-                3: '情報蒐集', 
-                4: '魔王戰', 
-                5: '最終結算'
+                2: '結果回顧',
+                3: '角色模擬', 
+                4: '情報蒐集', 
+                5: '魔王戰', 
+                6: '最終結算'
             };
-            if(stageDisplay) stageDisplay.textContent = `當前階段：${stageNames[stage]}`;
+            if(stageDisplay) stageDisplay.textContent = `階段: ${stageNames[stage]}`;
 
             showScenario(stage >= 1);
         }
@@ -776,33 +929,35 @@
         // 6. Stage 0: Init
         // ----------------------------------------------------
         function renderApiKeyInput() {
-            hideError();
             const html = `
-                <div class="card p-8 arena-bg max-w-lg mx-auto text-center">
-                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">-啟動系統-</h2>
-                    <p class="text-gray-400 mb-6 text-sm">請輸入您的 Gemini API Key 以啟動辯論系統。</p>
+                <div class="card p-10 arena-bg max-w-xl mx-auto text-center border-t-4 border-emerald-500 shadow-2xl">
+                    <h2 class="text-4xl font-bold text-white mb-8 tracking-tight drop-shadow-md">
+                        系統啟動 <span class="text-emerald-400 text-lg align-top ml-2">INITIALIZE</span>
+                    </h2>
                     
-                    <!-- NEW: API Key Instruction Block -->
-                    <div class="mb-6 text-left bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-                        <h3 class="text-emerald-400 font-bold mb-2 text-sm">＊如何取得 API Key？</h3>
-                        <ol class="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                            <li>前往 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline">Google AI Studio</a></li>
-                            <li>登入您的 Google 帳號</li>
-                            <li>點擊 <strong>Create API key</strong> 按鈕</li>
-                            <li>將生成的 Key 複製並貼入下方欄位</li>
+                    <div class="mb-8 text-left bg-black/20 p-6 rounded-2xl border border-white/5 backdrop-blur-sm">
+                        <h3 class="text-emerald-400 font-bold mb-3 text-sm tracking-wider uppercase flex items-center">
+                            <span class="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></span>
+                            API Key 取得方式
+                        </h3>
+                        <ol class="text-sm text-slate-300 space-y-2 list-decimal list-inside font-medium">
+                            <li>前往 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-white hover:text-emerald-400 underline transition-colors">Google AI Studio</a></li>
+                            <li>點擊 <strong>Create API key</strong></li>
+                            <li>複製並貼上您的密鑰</li>
                         </ol>
                     </div>
 
-                    <div class="mb-6 relative">
+                    <div class="mb-8 relative group">
+                        <div class="absolute inset-0 bg-emerald-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
                         <input type="password" id="api-key-input-field" 
-                            class="w-full p-4 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition shadow-inner text-center font-mono placeholder-gray-600"
-                            placeholder="AIzaSy...">
+                            class="w-full p-5 text-center text-lg placeholder-slate-500 relative z-10"
+                            placeholder="AIzaSy... [在此貼上 Key]">
                     </div>
                     
-                    <button id="submit-api-key" class="w-full soft-btn-secondary py-4 rounded-xl text-xl font-bold tracking-widest shadow-xl">
+                    <button id="submit-api-key" class="w-full soft-btn btn-base py-5 text-xl tracking-wide shadow-emerald-500/30">
                         確認並連線
                     </button>
-                    <p class="text-xs text-gray-600 mt-4">您的 Key 僅用於當前瀏覽器連線，不會被儲存。</p>
+                    <p class="text-xs text-slate-500 mt-6">您的 Key 僅用於瀏覽器端連線，不會被儲存。</p>
                 </div>
             `;
             stages[0].innerHTML = html;
@@ -822,18 +977,17 @@
 
         // 定義各分類的專屬 Prompt
         const TOPIC_PROMPTS = {
-            "世界時事": "請生成一篇關於當前重大國際地緣政治衝突或全球經濟危機的爭議性貼文...",
-            "社會議題": "請生成一篇關於世代對立、居住正義或性別平權的激烈爭議貼文...",
-            "生活時事": "請生成一篇關於交通亂象、物價通膨或食品安全的民生抱怨貼文...",
-            "科技趨勢": "請生成一篇關於AI取代人類工作、個資隱私或科技巨頭壟斷的科技焦慮貼文...",
-            "娛樂八卦": "請生成一篇關於當紅明星醜聞、網紅翻車或娛樂圈潛規則的八卦爆料貼文...",
-            "隨機生成": "請生成一篇關於熱門時事的爭議性貼文...",
+            "世界時事": "請扮演一位鍵盤國際關係專家，針對當前國際地緣政治或全球經濟，發表一篇看似有理但充滿偏見的『逆風』貼文。語氣要帶有『眾人皆醉我獨醒』的優越感，挑戰主流價值觀。內容需具備高度爭議性。",
+            "社會議題": "請模仿 Dcard 熱門文章風格，以第一人稱分享一個關於『世代對立』、『性別戰爭』或『貧富差距』的個人經歷，並將其過度引申為社會結構問題。語氣要激動、情緒化，刻意製造對立，吸引兩派人馬戰翻。",
+            "生活時事": "請模仿 Threads 的廢文風格，針對台灣交通、物價或食安問題，發表一篇極度厭世且帶有攻擊性的抱怨文。內容要充滿情緒性字眼，不需要太多邏輯，重點是引起共鳴讓大家一起罵。",
+            "科技趨勢": "請扮演一位激進的科技懷疑論者，針對『AI 取代人類』、『科技監控』或『大公司壟斷』發表一篇充滿焦慮與陰謀論的貼文。語氣要恐慌，並暗示人類末日即將到來。",
+            "娛樂八卦": "請模仿壹週刊或八卦版口吻，針對一個虛構的當紅明星或網紅翻車事件進行爆料與公審。內容要包含『人設崩壞』、『私德敗壞』等元素，語氣要尖酸刻薄，站在道德制高點批判。",
+            "隨機生成": "請隨機挑選一個目前網路最熱門且最具爭議的話題（如兩性、政治、環保），生成一篇引戰貼文。語氣要模稜兩可，或是故意說出極端的『政治不正確』言論，目的是讓底下留言區吵成一團。",
         };
 
         async function generateRandomScenario(category) {
             playClickSFX();
-            hideError();
-            toggleLoading(true, `AI 正在為您生成 「${category}」 類別中，有趣的、反諷的爭議話題...`);
+            toggleLoading(true, `AI 正在生成「${category}」主題...`);
             try {
                 // 使用專屬的提示詞
                 const specificPrompt = TOPIC_PROMPTS[category] || TOPIC_PROMPTS["隨機生成"];
@@ -853,37 +1007,40 @@
                 
                 toggleLoading(false);
             } catch (error) {
-                toggleLoading(false);
                 displayError(error.message);
             }
         }
         
         function renderTopicSelection() {
-            hideError(); 
             const html = `
-                <div class="card p-8 arena-bg">
-                    <h2 class="text-3xl font-black text-emerald-400 mb-6 tracking-wide">選擇戰場話題</h2>
+                <div class="card p-10 arena-bg">
+                    <h2 class="text-4xl font-bold text-white mb-8 tracking-tight drop-shadow-md text-center md:text-left">
+                        選擇戰場話題
+                    </h2>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                        <button data-category="世界時事" class="soft-btn py-5 text-lg shadow-lg">🌍 世界時事</button>
-                        <button data-category="社會議題" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color:white;">🗣️ 社會議題</button>
-                        <button data-category="生活時事" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color:white;">🏡 生活時事</button>
-                        <button data-category="科技趨勢" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color:white;">🤖 科技趨勢</button>
-                        <button data-category="娛樂八卦" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color:white;">🍿 娛樂八卦</button>
-                        <button data-category="隨機生成" class="soft-btn py-5 text-lg shadow-lg" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color:white;">🎲 隨機生成</button>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-5 mb-10">
+                        <button data-category="世界時事" class="soft-btn-secondary btn-base py-6 text-lg hover:border-emerald-400 hover:text-emerald-300">🌍 世界時事</button>
+                        <button data-category="社會議題" class="soft-btn-secondary btn-base py-6 text-lg hover:border-pink-400 hover:text-pink-300">🗣️ 社會議題</button>
+                        <button data-category="生活時事" class="soft-btn-secondary btn-base py-6 text-lg hover:border-blue-400 hover:text-blue-300">🏡 生活時事</button>
+                        <button data-category="科技趨勢" class="soft-btn-secondary btn-base py-6 text-lg hover:border-purple-400 hover:text-purple-300">🤖 科技趨勢</button>
+                        <button data-category="娛樂八卦" class="soft-btn-secondary btn-base py-6 text-lg hover:border-yellow-400 hover:text-yellow-300">🍿 娛樂八卦</button>
+                        <button data-category="隨機生成" class="soft-btn-secondary btn-base py-6 text-lg hover:border-white hover:text-white">🎲 隨機生成</button>
                     </div>
 
-                    <div class="relative flex py-5 items-center">
-                        <div class="flex-grow border-t border-gray-600"></div>
-                        <span class="flex-shrink-0 mx-4 text-gray-500 text-xs">或是手動輸入貼文</span>
-                        <div class="flex-grow border-t border-gray-600"></div>
+                    <div class="relative flex py-6 items-center">
+                        <div class="flex-grow border-t border-white/10"></div>
+                        <span class="flex-shrink-0 mx-6 text-slate-500 text-sm font-bold tracking-wider">或是手動輸入貼文</span>
+                        <div class="flex-grow border-t border-white/10"></div>
                     </div>
 
-                    <textarea id="scenario-input" rows="4" 
-                              class="w-full p-5 bg-gray-900/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition shadow-inner"
-                              placeholder="貼入 Threads/Dcard 文章內容..."></textarea>
+                    <div class="relative">
+                        <textarea id="scenario-input" rows="4" 
+                                class="w-full p-6 text-lg leading-relaxed shadow-inner"
+                                placeholder="在此貼入 Threads/Dcard 文章內容..."></textarea>
+                        <div class="absolute bottom-4 right-4 text-slate-600 text-xs pointer-events-none">支援中文內容</div>
+                    </div>
                     
-                    <button id="start-button" class="mt-8 w-full soft-btn-secondary py-4 rounded-xl text-xl font-bold tracking-widest shadow-xl">
+                    <button id="start-button" class="mt-8 w-full soft-btn btn-base py-5 text-xl tracking-widest shadow-emerald-500/20 hover:scale-[1.01]">
                         開始挑戰
                     </button>
                 </div>
@@ -907,7 +1064,7 @@
                 gameState.scenario = scenario;
                 gameState.scenarioCategory = gameState.scenarioCategory || "自行輸入";
 
-                toggleLoading(true, `分析貼文架構、劃分 F/O (事實/觀點) 並生成角色中...`);
+                toggleLoading(true, `AI 正在分析貼文架構...`);
                 try {
                     const prompt = `針對貼文：「${gameState.scenario}」。生成5個陳述句，並為每個陳述句提供其正確的 F/O (事實/觀點) 分類、詳細解釋，以及如果包含複雜詞彙，請在 "term" 欄位提供該詞彙並在 "termDefinition" 欄位提供該詞彙的簡潔解釋。請**不要**使用「判斷(Judgment)」作為分類結果。同時生成3個不同立場的社群角色，每個角色需有名字、職業、emoji icon、立場、具體動機(motivation)與初始評論。繁體中文。`;
                     const payload = createPayload(prompt, gameSetupSchema);
@@ -926,7 +1083,6 @@
                     renderStage1();
                     showStage(1);
                 } catch (error) {
-                    toggleLoading(false);
                     displayError(error.message);
                 }
             });
@@ -938,35 +1094,42 @@
         function renderStage1() {
             const fojData = gameState.gameData.fojStatements;
             let html = `
-                <div class="card p-6 mb-6 border-l-4 border-emerald-500">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold text-emerald-400">Phase 1: 邏輯拆解 (事實/觀點)</h2>
-                        <div class="flex items-center space-x-3">
-                            <span class="text-xs font-bold text-gray-400">當前得分: </span>
-                            <span id="foj-current-score" class="text-2xl font-black text-yellow-400">${gameState.fojScore}</span>
-                            <button id="foj-info-button" class="text-xs bg-gray-700 px-3 py-1 rounded-full text-white transition hover:bg-gray-600">什麼是 F/O?</button>
+                <div class="card p-8 mb-8 border-l-4 border-emerald-500 fade-in-up bg-slate-900/40">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-3xl font-bold text-emerald-400 drop-shadow-md">Phase 1: 邏輯拆解</h2>
+                        <div class="flex items-center gap-4 bg-black/20 px-4 py-2 rounded-full border border-white/5">
+                            <span class="text-xs font-bold text-slate-400 tracking-wider">SCORE</span>
+                            <span id="foj-current-score" class="text-3xl font-black text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">${gameState.fojScore}</span>
                         </div>
                     </div>
-                    <p class="text-gray-400 text-sm mt-1">請判斷以下陳述是 事實(Fact) 還是 觀點(Opinion)。</p>
+                    <div class="flex items-center gap-2 text-slate-400 text-sm font-medium">
+                        <span>請判斷以下陳述是</span>
+                        <strong class="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">事實 (Fact)</strong>
+                        <span>還是</span>
+                        <strong class="text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">觀點 (Opinion)</strong>
+                        <button id="foj-info-button" class="ml-auto text-xs bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition">規則說明</button>
+                    </div>
                 </div>
-                <div id="statement-list" class="space-y-4">
+                <div id="statement-list" class="space-y-5 fade-in-up" style="animation-delay: 0.1s">
             `;
             
             fojData.forEach((item, idx) => { 
                 html += `
-                    <div class="card p-5 flex flex-col md:flex-row justify-between items-center gap-4 foj-statement relative hover:shadow-md transition" data-index="${idx}" data-state="pending">
-                        <p class="text-white flex-grow font-medium leading-relaxed"><span class="text-emerald-500 font-mono mr-3">0${idx+1}.</span>${parseText(item.statement)}</p>
-                        <div class="flex space-x-2 shrink-0 foj-buttons">
-                            <button data-type="Fact" class="tag-btn bg-gray-800 border border-emerald-600/30 text-emerald-400 hover:bg-emerald-600 hover:text-white py-2 px-4 rounded-lg text-xs font-bold transition">事實</button>
-                            <button data-type="Opinion" class="tag-btn bg-gray-800 border border-yellow-600/30 text-yellow-400 hover:bg-yellow-600 hover:text-white py-2 px-4 rounded-lg text-xs font-bold transition">觀點</button>
+                    <div class="card p-6 flex flex-col md:flex-row justify-between items-center gap-6 foj-statement relative hover:border-emerald-500/30 transition-all group" data-index="${idx}" data-state="pending">
+                        <p class="text-slate-100 flex-grow font-medium leading-relaxed text-lg group-hover:text-white transition-colors">
+                            <span class="text-emerald-500/50 font-bold mr-4 text-2xl align-middle">0${idx+1}</span>${parseText(item.statement)}
+                        </p>
+                        <div class="flex gap-3 shrink-0 foj-buttons">
+                            <button data-type="Fact" class="btn-base bg-slate-800/50 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-white py-3 px-8 text-base font-bold shadow-lg">事實</button>
+                            <button data-type="Opinion" class="btn-base bg-slate-800/50 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-white py-3 px-8 text-base font-bold shadow-lg">觀點</button>
                         </div>
-                        <p class="result-message hidden text-sm font-bold absolute right-5 top-5"></p>
+                        <div class="result-message hidden absolute right-6 top-6 px-3 py-1 rounded-lg bg-black/60 backdrop-blur-sm border border-white/10 font-bold text-sm shadow-xl"></div>
                     </div>
                 `;
             });
 
             html += `</div>
-                <button id="stage1-next-button" class="mt-8 w-full soft-btn-secondary py-4 text-lg shadow-xl" disabled>
+                <button id="stage1-next-button" class="mt-10 w-full soft-btn-secondary btn-base py-5 text-xl shadow-lg hover:shadow-indigo-500/20" disabled>
                     提交並檢視結果
                 </button>
             `;
@@ -979,14 +1142,19 @@
 
             document.getElementById('foj-info-button').addEventListener('click', () => {
                 displayModal('F/O 定義', 
-                    `<ul class="list-disc pl-5 space-y-2">
-                        <li><strong class="text-emerald-400">事實 (Fact)</strong>: 客觀存在，可被驗證真偽。分數: +20</li>
-                        <li><strong class="text-yellow-400">觀點 (Opinion)</strong>: 個人的想法或感受，無對錯之分。分數: +20</li>
-                    </ul>
-                    <p class="mt-4 text-sm text-gray-500 italic">每題答對可獲得 20 分。總分 100 分將作為最終邏輯分數的基礎。</p>`);
+                    `<div class="grid gap-4">
+                        <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                            <strong class="text-emerald-400 text-lg block mb-1">事實 (Fact)</strong>
+                            <p class="text-slate-300">客觀存在，可被驗證真偽的描述。<br><span class="text-xs opacity-70">例如：「水在100度沸騰。」</span></p>
+                        </div>
+                        <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                            <strong class="text-amber-400 text-lg block mb-1">觀點 (Opinion)</strong>
+                            <p class="text-slate-300">個人的想法、感受或價值判斷，無絕對對錯。<br><span class="text-xs opacity-70">例如：「這杯水太燙了。」</span></p>
+                        </div>
+                    </div>`);
             });
 
-            document.querySelectorAll('.tag-btn').forEach(btn => {
+            document.querySelectorAll('.btn-base[data-type]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const parent = e.target.closest('.foj-statement');
                     if (parent.getAttribute('data-state') !== 'pending') return;
@@ -999,31 +1167,38 @@
                     userSelections[idx] = selectedType;
                     parent.setAttribute('data-state', 'selected');
 
-                    parent.querySelectorAll('.tag-btn').forEach(b => {
+                    parent.querySelectorAll('.btn-base').forEach(b => {
                         b.disabled = true;
+                        b.classList.add('opacity-50', 'grayscale');
                     });
+                    
+                    // Highlight selected button logic
+                    e.target.classList.remove('opacity-50', 'grayscale', 'bg-slate-800/50');
+                    e.target.classList.add('ring-2', 'ring-white/50', 'scale-105');
                     
                     const messageEl = parent.querySelector('.result-message');
                     messageEl.classList.remove('hidden');
 
                     if (selectedType === correctType) {
                         playSuccessSFX();
-                        parent.classList.add('border-emerald-500/50', 'bg-emerald-900/10');
-                        messageEl.classList.add('text-emerald-400');
-                        messageEl.textContent = '✅ 正確! (+20)';
+                        parent.classList.add('border-emerald-500', 'bg-emerald-500/5');
+                        messageEl.classList.add('text-emerald-400', 'border-emerald-500/30');
+                        messageEl.innerHTML = '✅ <span class="ml-1">正確</span>';
                         gameState.fojScore += 20; 
                     } else {
                         playFailureSFX();
-                        parent.classList.add('border-red-500/50', 'bg-red-900/10');
-                        messageEl.classList.add('text-red-400');
-                        messageEl.textContent = `❌ 錯誤. 正解: ${correctType}`;
+                        parent.classList.add('border-rose-500', 'bg-rose-500/5');
+                        messageEl.classList.add('text-rose-400', 'border-rose-500/30');
+                        messageEl.innerHTML = `❌ <span class="ml-1">錯誤</span> <span class="text-xs opacity-75 ml-1">(正解: ${correctType})</span>`;
                     }
 
                     scoreDisplay.textContent = gameState.fojScore;
 
-                    parent.querySelectorAll('.tag-btn').forEach(b => {
+                    // Re-style the correct button to show it clearly
+                    parent.querySelectorAll('.btn-base').forEach(b => {
                         if (b.getAttribute('data-type') === correctType) {
-                            b.classList.add('ring-2', 'ring-yellow-500', 'bg-yellow-800/30'); // Highlight correct choice
+                            b.classList.remove('grayscale', 'opacity-50', 'bg-slate-800/50');
+                            b.classList.add('bg-slate-700', 'text-white', 'border-white/20'); 
                         }
                     });
 
@@ -1032,6 +1207,7 @@
                         nextBtn.disabled = false;
                         nextBtn.classList.remove('soft-btn-secondary');
                         nextBtn.classList.add('soft-btn');
+                        nextBtn.innerHTML = '查看詳細解析 👉';
                     }
                 });
             });
@@ -1046,45 +1222,44 @@
         }
 
         // ----------------------------------------------------
-        // 8. Stage 2: Result & Role Play (評分嚴格化)
+        // 8. Stage 2: Result Review (Only Result, No Role Play)
         // ----------------------------------------------------
         function renderStage2() {
             const fojData = gameState.gameData.fojStatements;
             const statements = fojData.map(item => item.statement);
             
-            const role = gameState.gameData.characters[gameState.assignedRoleIndex = Math.floor(Math.random()*3)];
-
             let html = `
-                <div class="card p-6 mb-6 border-l-4 border-emerald-500">
-                    <h2 class="text-xl font-bold text-emerald-400">Phase 2: 分析結果與角色模擬</h2>
-                    <div class="flex items-center space-x-4 mt-2">
-                         <p class="text-gray-400 text-sm">邏輯拆解得分: </p>
-                         <span class="text-3xl font-black text-yellow-400">${gameState.fojScore} / 100</span>
+                <div class="card p-8 mb-8 border-l-4 border-emerald-500 fade-in-up bg-slate-900/40">
+                    <h2 class="text-3xl font-bold text-emerald-400 mb-2 drop-shadow-md">Phase 2: 分析結果回顧</h2>
+                    <div class="flex items-center gap-4">
+                         <p class="text-slate-400 text-sm font-bold tracking-wider">LOGIC SCORE</p>
+                         <span class="text-4xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.3)]">${gameState.fojScore} <span class="text-lg text-slate-500 font-normal">/ 100</span></span>
                     </div>
                 </div>
-                <div class="space-y-4 mb-10">
+                <div class="space-y-5 mb-10 fade-in-up" style="animation-delay: 0.1s">
             `;
             
             statements.forEach((stmt, i) => {
                 const correct = fojData[i].correctAnswer;
                 const explanation = fojData[i].explanation;
                 const isCorrect = gameState.userFactChecks[i] === correct;
-                const color = isCorrect ? 'border-emerald-500/50' : 'border-red-500/50';
-                const bg = isCorrect ? 'bg-emerald-900/10' : 'bg-red-900/10';
+                const color = isCorrect ? 'border-emerald-500' : 'border-rose-500';
+                const icon = isCorrect ? '✅' : '❌';
                 
-                const wrongBadge = !isCorrect ? `<span class="text-xs font-bold text-red-300 mr-2 strike-through">您選: ${gameState.userFactChecks[i]}</span>` : '';
+                const wrongBadge = !isCorrect ? `<span class="inline-block px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-xs font-bold mr-2 mb-2 border border-rose-500/20">您選: ${gameState.userFactChecks[i]}</span>` : '';
 
                 html += `
-                    <div class="card p-4 border-l-4 ${color} ${bg} rounded-r-xl">
-                        <div class="flex justify-between items-start mb-2">
-                            <p class="text-sm text-gray-200 font-medium">${parseText(stmt)}</p>
-                            <span class="text-xs px-2 py-1 rounded-md ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'} font-bold whitespace-nowrap ml-2">
-                                ${isCorrect ? '✅' : '❌'}
-                            </span>
+                    <div class="card p-6 border-l-4 ${color} hover:translate-x-1 transition-transform">
+                        <div class="flex justify-between items-start mb-3">
+                            <p class="text-lg text-slate-200 font-medium leading-relaxed">${parseText(stmt)}</p>
+                            <span class="text-xl ml-4 shrink-0 filter drop-shadow-lg">${icon}</span>
                         </div>
-                        <div class="text-xs text-gray-400 bg-gray-900/50 p-3 rounded-lg">
-                            <p class="mb-1">${wrongBadge} <span class="text-emerald-400 font-bold">正解: ${correct}</span></p>
-                            <p>${parseText(explanation)}</p>
+                        <div class="bg-black/30 p-4 rounded-xl border border-white/5 relative">
+                            <div class="absolute top-0 left-0 w-1 h-full ${isCorrect ? 'bg-emerald-500/50' : 'bg-rose-500/50'} rounded-l-xl"></div>
+                            <div class="pl-3">
+                                ${wrongBadge} <span class="text-emerald-400 font-bold text-sm uppercase tracking-wide">正解: ${correct}</span>
+                                <p class="text-slate-400 text-sm mt-2 leading-relaxed">${parseText(explanation)}</p>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1092,41 +1267,83 @@
 
             html += `
                 </div>
-                <div id="role-play-area" class="card p-8 border-2 border-indigo-500/50 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 text-9xl">🎭</div>
-                    <h2 class="text-2xl font-bold text-indigo-400 mb-6">Role Assignment: 角色分派</h2>
+                <button id="to-roleplay-btn" class="w-full soft-btn btn-base py-5 text-xl shadow-lg hover:shadow-emerald-500/20 fade-in-up" style="animation-delay: 0.2s">
+                    進入角色模擬 (Role Play)
+                </button>
+            `;
+            stages[2].innerHTML = html;
+
+            document.getElementById('to-roleplay-btn').addEventListener('click', () => {
+                playClickSFX();
+                renderStage3();
+                showStage(3);
+            });
+        }
+
+        // ----------------------------------------------------
+        // 9. Stage 3: Role Play (New Independent Stage)
+        // ----------------------------------------------------
+        function renderStage3() {
+            if (gameState.assignedRoleIndex === null) {
+                gameState.assignedRoleIndex = Math.floor(Math.random()*3);
+            }
+            const role = gameState.gameData.characters[gameState.assignedRoleIndex];
+
+            let html = `
+                <div class="card p-8 mb-8 border-l-4 border-indigo-500 fade-in-up bg-slate-900/40">
+                    <h2 class="text-3xl font-bold text-indigo-400 mb-2 drop-shadow-md">Phase 3: 角色模擬</h2>
+                    <p class="text-slate-400 text-sm font-medium">換位思考訓練。請暫時放下個人觀點，全心扮演以下角色。</p>
+                </div>
+
+                <div id="role-play-area" class="card p-10 border border-indigo-500/30 relative overflow-hidden fade-in-up group" style="animation-delay: 0.1s">
+                    <!-- 背景裝飾 -->
+                    <div class="absolute -right-10 -top-10 text-[10rem] opacity-5 group-hover:opacity-10 transition-opacity select-none">🎭</div>
+                    <div class="absolute inset-0 bg-indigo-500/5 pointer-events-none"></div>
                     
-                    <div class="bg-indigo-900/20 p-6 rounded-2xl border border-indigo-500/30 flex flex-col md:flex-row items-center gap-6 mb-6">
-                        <div class="text-7xl emoji-icon drop-shadow-xl filter">${role.icon}</div>
-                        <div>
-                            <h3 class="text-2xl font-bold text-white mb-1">${role.name}</h3>
-                            <p class="text-indigo-300 font-medium mb-3">${role.job} <span class="mx-2">|</span> 立場：${role.stance}</p>
+                    <h2 class="text-2xl font-bold text-white mb-8 relative z-10 flex items-center">
+                        <span class="w-2 h-8 bg-indigo-500 rounded-full mr-3 shadow-[0_0_10px_#6366f1]"></span>
+                        角色分派 (Role Assignment)
+                    </h2>
+                    
+                    <div class="bg-slate-800/60 p-6 rounded-2xl border border-indigo-500/20 flex flex-col md:flex-row items-center gap-8 mb-8 relative z-10 backdrop-blur-sm">
+                        <div class="text-8xl emoji-icon drop-shadow-2xl scale-110">${role.icon}</div>
+                        <div class="flex-grow text-center md:text-left">
+                            <h3 class="text-3xl font-black text-white mb-2 tracking-tight">${role.name}</h3>
+                            <p class="text-indigo-300 font-bold mb-4 text-lg bg-indigo-500/10 inline-block px-3 py-1 rounded-lg border border-indigo-500/20">${role.job} <span class="mx-2 text-slate-500">|</span> 立場：${role.stance}</p>
                             
-                            <div class="bg-black/30 p-4 rounded-xl">
-                                <p class="text-xs text-indigo-200 font-bold mb-1 uppercase tracking-wider">動機 (Motivation):</p>
-                                <p class="text-gray-300 text-sm italic leading-relaxed">${parseText(role.motivation || '無動機資料')}</p>
+                            <div class="bg-black/30 p-5 rounded-xl border-l-4 border-indigo-400 text-left shadow-inner">
+                                <p class="text-xs text-indigo-300 font-bold mb-2 uppercase tracking-wider flex items-center">
+                                    <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full mr-2"></span>核心動機
+                                </p>
+                                <p class="text-slate-200 text-base italic leading-relaxed">"${parseText(role.motivation || '無動機資料')}"</p>
                             </div>
                         </div>
                     </div>
 
-                    <p class="text-gray-300 mb-2 font-medium">任務：請根據該角色的動機與立場，撰寫一則留言。</p>
-                    <textarea id="role-input" rows="4" class="w-full p-4 bg-gray-800 border border-indigo-500/50 rounded-xl text-white focus:border-indigo-400 transition" placeholder="試著模仿 ${role.name} 的語氣..."></textarea>
-                    <button id="stage2-btn" class="mt-6 w-full soft-btn-secondary py-4 rounded-xl text-lg font-bold" disabled>提交模擬留言</button>
+                    <div class="relative z-10">
+                        <p class="text-slate-300 mb-3 font-bold flex items-center">
+                            <span class="text-xl mr-2">✍️</span> 任務：請根據該角色的動機與立場，撰寫一則留言。
+                        </p>
+                        <textarea id="role-input" rows="5" class="w-full p-5 text-lg shadow-inner" placeholder="試著模仿 ${role.name} 的語氣..."></textarea>
+                        <button id="stage3-btn" class="mt-8 w-full soft-btn-secondary btn-base py-5 text-xl font-bold shadow-lg" disabled>
+                            提交模擬留言
+                        </button>
+                    </div>
                 </div>
                 <div id="critique-area"></div>
             `;
-            stages[2].innerHTML = html;
+            stages[3].innerHTML = html;
 
             const input = document.getElementById('role-input');
-            const btn = document.getElementById('stage2-btn');
+            const btn = document.getElementById('stage3-btn');
+            
             input.addEventListener('input', () => btn.disabled = input.value.length < 5);
 
             btn.addEventListener('click', async () => {
                 playClickSFX();
                 gameState.userRoleArgument = input.value;
-                toggleLoading(true, 'AI 導師評分中...');
+                toggleLoading(true, 'AI 導師正在評分您的模仿能力...');
                 try {
-                    // UPDATED PROMPT: 要求 AI 嚴格評分，並對複製貼上行為給予 0 分
                     const critiquePrompt = `評估角色扮演：角色 ${role.name} (職業: ${role.job}, 動機: ${role.motivation}, 立場: ${role.stance})，玩家模擬評論：${input.value}。
 您現在是一個極其嚴格的辯論導師。請根據玩家對角色立場、語氣和核心動機的貼合程度，進行嚴厲的評分(0-100)。
 規則 1：若玩家的評論與角色設定有細微偏差，請嚴格扣分（例如，動機未體現、語氣不夠像、論點太理性等）。
@@ -1136,93 +1353,93 @@
                     const res = await apiCall(createPayload(critiquePrompt, rolePlayCritiqueSchema));
                     gameState.rolePlayCritique = res;
                     
-                    const scoreColor = res.score >= 80 ? 'text-emerald-400' : (res.score >= 60 ? 'text-yellow-400' : 'text-red-400');
+                    const scoreColor = res.score >= 80 ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]' : (res.score >= 60 ? 'text-amber-400' : 'text-rose-400');
                     document.getElementById('role-play-area').classList.add('hidden');
                     document.getElementById('critique-area').innerHTML = `
-                        <div class="card p-8 border-t-4 border-indigo-500 stage-transition">
-                            <div class="flex items-center justify-between mb-6">
-                                <h3 class="text-2xl font-bold text-white">導師回饋</h3>
-                                <div class="text-center">
-                                    <span class="text-4xl font-black ${scoreColor}">${res.score}</span>
-                                    <span class="text-sm text-gray-500 block">分</span>
+                        <div class="card p-10 border-t-4 border-indigo-500 stage-transition text-center">
+                            <div class="mb-8">
+                                <h3 class="text-2xl font-bold text-slate-400 mb-2 uppercase tracking-widest">導師回饋</h3>
+                                <div class="inline-block relative">
+                                    <span class="text-8xl font-black ${scoreColor}">${res.score}</span>
+                                    <span class="text-xl text-slate-500 absolute -right-8 top-2 font-bold">PTS</span>
                                 </div>
                             </div>
-                            <div class="bg-gray-800/50 p-6 rounded-2xl mb-6">
-                                <p class="text-gray-300 leading-relaxed">${parseText(res.critique)}</p>
+                            <div class="bg-slate-800/60 p-8 mb-8 border border-white/10 rounded-2xl text-left shadow-lg">
+                                <p class="text-slate-200 text-lg leading-relaxed">${parseText(res.critique)}</p>
                             </div>
-                            <button id="to-stage3" class="w-full soft-btn py-4 text-lg">前往下一階段</button>
+                            <button id="to-stage4" class="w-full soft-btn btn-base py-5 text-xl shadow-lg hover:shadow-indigo-500/20">前往下一階段</button>
                         </div>
                     `;
-                    document.getElementById('to-stage3').addEventListener('click', () => {
-                        renderStage3(); showStage(3);
+                    document.getElementById('to-stage4').addEventListener('click', () => {
+                        renderStage4(); showStage(4);
                     });
                     toggleLoading(false);
                     playSuccessSFX();
                 } catch (e) {
-                    toggleLoading(false);
                     displayError(e.message);
                 }
             });
         }
 
         // ----------------------------------------------------
-        // 9. Stage 3: Observation
+        // 10. Stage 4: Observation (Renamed from Stage 3)
         // ----------------------------------------------------
-        function renderStage3() {
+        function renderStage4() {
             const characters = gameState.gameData.characters;
             const glossaryTerms = Object.keys(gameState.glossary);
 
             let html = `
-                <div class="card p-6 mb-6 border-l-4 border-emerald-500">
-                    <h2 class="text-xl font-bold text-emerald-400">Phase 3: 輿論觀察 (情報蒐集)</h2>
-                    <p class="text-gray-400 text-sm mt-1">知己知彼。觀察社群上不同立場的聲音並熟悉術語。</p>
+                <div class="card p-8 mb-8 border-l-4 border-emerald-500 fade-in-up bg-slate-900/40">
+                    <h2 class="text-3xl font-bold text-emerald-400 mb-2 drop-shadow-md">Phase 4: 輿論觀察</h2>
+                    <p class="text-slate-400 text-sm font-medium">知己知彼。觀察社群上不同立場的聲音並熟悉術語。</p>
                 </div>
 
                 <!-- Glossary Section -->
                 ${glossaryTerms.length > 0 ? `
-                <div class="card p-5 mb-6 bg-yellow-900/20 border-yellow-500/50">
-                    <h3 class="text-lg font-bold text-yellow-400 mb-3 flex items-center">
-                        <span class="mr-2">📚</span> 專有名詞 / 關鍵術語
+                <div class="card p-6 mb-8 bg-amber-500/5 border border-amber-500/20 fade-in-up" style="animation-delay: 0.1s">
+                    <h3 class="text-lg font-bold text-amber-400 mb-4 flex items-center">
+                        <span class="mr-2 text-xl">📚</span> 關鍵術語 (Keywords)
                     </h3>
-                    <div id="glossary-list-stage3" class="flex flex-wrap gap-2">
-                        ${glossaryTerms.map(term => `<span class="glossary-term bg-yellow-800/50 text-yellow-300 text-xs px-3 py-1 rounded-full border border-yellow-700" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`).join('')}
+                    <div id="glossary-list-stage3" class="flex flex-wrap gap-3">
+                        ${glossaryTerms.map(term => `<span class="glossary-term" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`).join('')}
                     </div>
                 </div>
                 ` : ''}
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in-up" style="animation-delay: 0.2s">
             `;
             characters.forEach((char, i) => { 
                 html += `
-                    <div class="card p-5 character-enter hover:-translate-y-1 transition-transform" style="animation-delay: ${i*0.1}s">
-                        <div class="flex items-center mb-4">
-                            <span class="text-4xl mr-3 emoji-icon">${char.icon}</span>
+                    <div class="card p-6 hover:-translate-y-2 transition-transform duration-300 border-t border-white/5">
+                        <div class="flex items-center mb-5">
+                            <span class="text-5xl mr-4 emoji-icon drop-shadow-lg">${char.icon}</span>
                             <div>
-                                <h3 class="font-bold text-white leading-tight">${char.name}</h3>
-                                <p class="text-xs text-emerald-400 font-mono">${char.job}</p>
+                                <h3 class="font-bold text-white text-lg leading-tight mb-1">${char.name}</h3>
+                                <p class="text-xs font-bold text-emerald-400 uppercase tracking-wide bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 inline-block">${char.job}</p>
                             </div>
                         </div>
-                        <div class="bg-gray-700/30 p-4 rounded-xl rounded-tl-none text-sm text-gray-200 dialog-bubble leading-relaxed" style="animation-delay: ${0.5+i*0.1}s">
+                        <div class="dialog-bubble p-5 text-sm text-slate-200 leading-relaxed relative">
+                            <div class="absolute -top-2 left-6 w-4 h-4 bg-slate-700/80 rotate-45 border-t border-l border-white/5"></div>
                             ${parseText(char.comment)}
                         </div>
                     </div>
                 `;
             });
             html += `</div>
-                <button id="to-stage4-setup" class="mt-10 w-full soft-btn-danger py-5 text-xl font-black tracking-widest shadow-xl">
+                <button id="to-stage5-setup" class="mt-12 w-full soft-btn-danger btn-base py-5 text-xl tracking-widest shadow-xl fade-in-up hover:scale-[1.01]" style="animation-delay: 0.3s">
                     ⚠️ 進入戰鬥準備 (BATTLE SETUP)
                 </button>
             `;
-            stages[3].innerHTML = html;
-            document.getElementById('to-stage4-setup').addEventListener('click', () => {
+            stages[4].innerHTML = html;
+            document.getElementById('to-stage5-setup').addEventListener('click', () => {
                 playClickSFX();
-                renderStage4Setup();
-                showStage(4);
+                renderStage5Setup();
+                showStage(5);
             });
         }
 
         // ----------------------------------------------------
-        // 10. Stage 4: Boss Battle (Setup & Battle)
+        // 11. Stage 5: Boss Battle (Setup & Battle)
         // ----------------------------------------------------
         async function getHint(bossTxt, userTxt, bossFallacies) {
             const prompt = `
@@ -1236,8 +1453,8 @@
             return await apiCall(payload);
         }
 
-        async function renderStage4Setup() {
-            toggleLoading(true, '正在分析酸民戰力...');
+        async function renderStage5Setup() {
+            toggleLoading(true, '正在偵測酸民戰力...');
             gameState.debateHistory = [];
             gameState.bossMorale = 100;
             gameState.isSurrender = false;
@@ -1251,66 +1468,75 @@
 
                 // Render Setup UI
                 let html = `
-                    <div class="card p-8 border-2 border-red-500 rounded-3xl text-center">
-                        <h2 class="text-3xl font-black text-red-500 mb-2 tracking-widest uppercase">⚠️ WARNING: BOSS DETECTED</h2>
-                        <div class="flex justify-center my-6">
-                            <div class="text-9xl emoji-icon animate-pulse">${boss.icon}</div>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white mb-1">${boss.name}</h3>
-                        <p class="text-red-400 font-mono mb-6">${boss.job} (${boss.age}歲) | ${boss.stance}</p>
+                    <div class="card p-10 border-2 border-rose-500 text-center fade-in-up bg-slate-900/60 shadow-[0_0_30px_rgba(244,63,94,0.15)]">
+                        <div class="inline-block mb-4 px-4 py-1 rounded-full bg-rose-500/20 text-rose-400 font-bold text-sm tracking-[0.2em] border border-rose-500/30 animate-pulse">WARNING</div>
+                        <h2 class="text-4xl font-black text-white mb-8 tracking-tight drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]">BOSS DETECTED</h2>
                         
-                        <div class="bg-red-900/20 p-6 rounded-2xl mb-8 border border-red-500/30 text-left">
-                            <p class="text-sm text-red-300 font-bold mb-2">酸民攻擊預告：</p>
-                            <p class="text-gray-200 italic">${parseText(boss.initialComment)}</p>
-                            <p class="text-xs text-red-400 mt-4 border-t border-red-700/50 pt-2">常見謬誤：${boss.fallacies.join('、')}</p>
+                        <div class="flex justify-center mb-8 relative">
+                            <div class="absolute inset-0 bg-rose-500/20 blur-3xl rounded-full scale-150"></div>
+                            <div class="text-9xl emoji-icon animate-bounce z-10 drop-shadow-2xl grayscale-[0.2] contrast-125">${boss.icon}</div>
+                        </div>
+                        
+                        <h3 class="text-3xl font-bold text-white mb-2">${boss.name}</h3>
+                        <p class="text-rose-400 font-bold mb-8 text-lg">${boss.job} (${boss.age}歲) <span class="mx-2 text-slate-600">|</span> ${boss.stance}</p>
+                        
+                        <div class="bg-rose-900/10 p-8 border border-rose-500/30 rounded-2xl mb-10 text-left relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+                            <p class="text-xs text-rose-400 font-bold mb-3 uppercase tracking-wider">攻擊預告:</p>
+                            <p class="text-white text-xl italic font-serif leading-relaxed">"${parseText(boss.initialComment)}"<br/></p>
+                            <div class="mt-6 pt-4 border-t border-rose-500/20 flex flex-wrap gap-2">
+                                <span class="text-xs text-rose-300 uppercase font-bold mr-2 mt-1">偵測謬誤:</span>
+                                ${boss.fallacies.map(f => `<span class="bg-rose-500/20 text-rose-200 px-2 py-1 rounded text-xs border border-rose-500/30">${f}</span>`).join('')}
+                            </div>
                         </div>
 
-                        <h4 class="text-xl font-bold text-white mb-4 border-t border-gray-700 pt-6">選擇對戰難度 (Difficulty)</h4>
-                        <div class="grid grid-cols-3 gap-4 mb-6" id="difficulty-selector">
+                        <h4 class="text-xl font-bold text-slate-300 mb-6 flex items-center justify-center"><span class="w-8 h-[1px] bg-slate-600 mr-4"></span>選擇對戰難度<span class="w-8 h-[1px] bg-slate-600 ml-4"></span></h4>
+                        <div class="grid grid-cols-3 gap-4 mb-8" id="difficulty-selector">
                             <!-- Easy -->
-                            <button data-difficulty="EASY" class="soft-btn-difficulty py-5 rounded-xl transition-all hover:border-emerald-500">
-                                <div class="text-3xl mb-1">${DIFFICULTY_SETTINGS.EASY.icon}</div>
-                                <h5 class="text-lg font-bold text-emerald-400">${DIFFICULTY_SETTINGS.EASY.name}</h5>
-                                <p class="text-xs text-gray-400">${DIFFICULTY_SETTINGS.EASY.description}</p>
+                            <button data-difficulty="EASY" class="soft-btn-difficulty py-6 transition-all group hover:-translate-y-1">
+                                <div class="text-4xl mb-2 group-hover:scale-110 transition-transform">${DIFFICULTY_SETTINGS.EASY.icon}</div>
+                                <h5 class="text-lg font-bold text-emerald-400 group-hover:text-emerald-300">簡單</h5>
+                                <p class="text-xs text-slate-500 group-hover:text-slate-400">口條差/易破防</p>
                             </button>
                             <!-- Medium -->
-                            <button data-difficulty="MEDIUM" class="soft-btn-difficulty py-5 rounded-xl transition-all selected">
-                                <div class="text-3xl mb-1">${DIFFICULTY_SETTINGS.MEDIUM.icon}</div>
-                                <h5 class="text-lg font-bold text-indigo-400">${DIFFICULTY_SETTINGS.MEDIUM.name}</h5>
-                                <p class="text-xs text-gray-400">${DIFFICULTY_SETTINGS.MEDIUM.description}</p>
+                            <button data-difficulty="MEDIUM" class="soft-btn-difficulty py-6 transition-all selected group hover:-translate-y-1">
+                                <div class="text-4xl mb-2 group-hover:scale-110 transition-transform">${DIFFICULTY_SETTINGS.MEDIUM.icon}</div>
+                                <h5 class="text-lg font-bold text-indigo-400 group-hover:text-indigo-300">普通</h5>
+                                <p class="text-xs text-slate-500 group-hover:text-slate-400">正常爭論</p>
                             </button>
                             <!-- Hard -->
-                            <button data-difficulty="HARD" class="soft-btn-difficulty py-5 rounded-xl transition-all hover:border-red-500">
-                                <div class="text-3xl mb-1">${DIFFICULTY_SETTINGS.HARD.icon}</div>
-                                <h5 class="text-lg font-bold text-red-400">${DIFFICULTY_SETTINGS.HARD.name}</h5>
-                                <p class="text-xs text-gray-400">${DIFFICULTY_SETTINGS.HARD.description}</p>
+                            <button data-difficulty="HARD" class="soft-btn-difficulty py-6 transition-all group hover:-translate-y-1">
+                                <div class="text-4xl mb-2 group-hover:scale-110 transition-transform">${DIFFICULTY_SETTINGS.HARD.icon}</div>
+                                <h5 class="text-lg font-bold text-rose-400 group-hover:text-rose-300">困難</h5>
+                                <p class="text-xs text-slate-500 group-hover:text-slate-400">一般辯論等級</p>
                             </button>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <button id="mode-rounds" data-mode="rounds" class="group relative bg-gray-800 hover:bg-blue-900/40 border border-gray-600 hover:border-blue-500 p-6 rounded-2xl transition-all ring-2 ring-blue-500 bg-blue-900/20">
-                                <div class="text-4xl mb-2 group-hover:scale-110 transition-transform">⏱️</div>
-                                <h4 class="text-xl font-bold text-white mb-1">戰術回合 (Tactical)</h4>
-                                <div class="flex items-center justify-center mt-2 space-x-2">
-                                    <span class="text-sm text-gray-400">回合數:</span>
-                                    <input type="number" id="round-input" value="4" min="1" max="10" class="w-16 bg-black/30 border border-gray-500 rounded text-center text-white" onclick="event.stopPropagation()">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            <button id="mode-rounds" data-mode="rounds" class="group relative bg-slate-800/60 hover:bg-emerald-500/10 border border-slate-600 hover:border-emerald-500/50 p-6 rounded-2xl transition-all ring-2 ring-emerald-500/50 shadow-lg">
+                                <div class="text-4xl mb-3 group-hover:scale-110 transition-transform">⏱️</div>
+                                <h4 class="text-xl font-bold text-white mb-2">戰術回合</h4>
+                                <div class="flex items-center justify-center space-x-3 bg-black/30 p-2 rounded-lg">
+                                    <span class="text-sm text-slate-400 font-bold">回合數:</span>
+                                    <input type="number" id="round-input" value="4" min="1" max="10" class="w-12 bg-transparent text-center text-white font-bold border-b border-slate-500 focus:border-emerald-500 outline-none" onclick="event.stopPropagation()">
                                 </div>
-                                <div id="check-rounds" class="absolute top-4 right-4 text-emerald-400 text-xl">✔</div>
+                                <div id="check-rounds" class="absolute top-4 right-4 text-emerald-400 text-xl bg-emerald-500/20 rounded-full w-6 h-6 flex items-center justify-center">✔</div>
                             </button>
-                            <button id="mode-endless" data-mode="endless" class="group relative bg-gray-800 hover:bg-red-900/40 border border-gray-600 hover:border-red-500 p-6 rounded-2xl transition-all">
-                                <div class="text-4xl mb-2 group-hover:scale-110 transition-transform">💀</div>
-                                <h4 class="text-xl font-bold text-white mb-1">無盡死鬥 (Endless)</h4>
-                                <p class="text-sm text-gray-400">直到酸民士氣歸零為止。</p>
-                                <div id="check-endless" class="absolute top-4 right-4 text-emerald-400 hidden text-xl">✔</div>
+                            <button id="mode-endless" data-mode="endless" class="group relative bg-slate-800/60 hover:bg-rose-500/10 border border-slate-600 hover:border-rose-500/50 p-6 rounded-2xl transition-all shadow-lg">
+                                <div class="text-4xl mb-3 group-hover:scale-110 transition-transform">💀</div>
+                                <h4 class="text-xl font-bold text-white mb-2">無盡死鬥</h4>
+                                <p class="text-sm text-slate-400">直到士氣歸零</p>
+                                <div id="check-endless" class="absolute top-4 right-4 text-emerald-400 hidden text-xl bg-emerald-500/20 rounded-full w-6 h-6 flex items-center justify-center">✔</div>
                             </button>
                         </div>
 
-                        <button id="start-battle" class="w-full soft-btn-danger py-5 text-xl font-black tracking-widest shadow-2xl">
-                            FIGHT! 開始對峙
+                        <button id="start-battle" class="w-full soft-btn-danger btn-base py-5 text-2xl font-black tracking-widest shadow-xl hover:scale-[1.02] relative overflow-hidden group">
+                            <span class="relative z-10">開戰! FIGHT</span>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                         </button>
                     </div>
                 `;
-                stages[4].innerHTML = html;
+                stages[5].innerHTML = html;
                 toggleLoading(false);
 
                 // --- Mode Selection Logic ---
@@ -1324,19 +1550,19 @@
                 function selectMode(mode) {
                     selectedMode = mode;
                     if (mode === 'endless') {
-                        btnEndless.classList.add('ring-2', 'ring-red-500', 'bg-red-900/20');
-                        btnRounds.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-900/20');
+                        btnEndless.classList.add('ring-2', 'ring-rose-500/50', 'bg-rose-500/10');
+                        btnRounds.classList.remove('ring-2', 'ring-emerald-500/50', 'bg-emerald-500/10');
                         checkEndless.classList.remove('hidden');
                         checkRounds.classList.add('hidden');
                         roundInput.disabled = true;
-                        roundInput.classList.add('opacity-50');
+                        roundInput.classList.add('opacity-30');
                     } else {
-                        btnRounds.classList.add('ring-2', 'ring-blue-500', 'bg-blue-900/20');
-                        btnEndless.classList.remove('ring-2', 'ring-red-500', 'bg-red-900/20');
+                        btnRounds.classList.add('ring-2', 'ring-emerald-500/50', 'bg-emerald-500/10');
+                        btnEndless.classList.remove('ring-2', 'ring-rose-500/50', 'bg-rose-500/10');
                         checkRounds.classList.remove('hidden');
                         checkEndless.classList.add('hidden');
                         roundInput.disabled = false;
-                        roundInput.classList.remove('opacity-50');
+                        roundInput.classList.remove('opacity-30');
                     }
                 }
 
@@ -1366,58 +1592,60 @@
                     } else {
                         MAX_DEBATE_ROUNDS = 999; // Effectively infinite
                     }
-                    renderStage4Battle();
+                    renderStage5Battle();
                 });
 
             } catch (e) {
-                toggleLoading(false);
                 displayError(e.message);
             }
         }
 
-        function renderStage4Battle() {
+        function renderStage5Battle() {
             const boss = gameState.bossCharacter;
             const difficulty = DIFFICULTY_SETTINGS[gameState.difficulty];
             
             let html = `
-                <div class="card p-6 mb-6 border-red-500/50 bg-red-900/5 flex justify-between items-center rounded-2xl">
+                <div class="card p-6 mb-6 border-l-4 border-rose-500 bg-rose-900/10 flex justify-between items-center fade-in-up shadow-[0_4px_20px_rgba(244,63,94,0.1)]">
                     <div>
-                        <h2 class="text-2xl font-black text-red-400 tracking-wide">Phase 4: 最終鍵盤戰</h2>
-                        <p class="text-red-300/70 text-sm">難度: ${difficulty.name} | ${gameState.gameMode === 'endless' ? '(無盡模式: 士氣歸零獲勝)' : `(回合模式: ${MAX_DEBATE_ROUNDS}回合)`}</p>
+                        <h2 class="text-2xl font-black text-rose-400 tracking-wide drop-shadow-md">Phase 5: 最終戰場</h2>
+                        <p class="text-rose-300 text-sm font-bold opacity-80">難度: ${difficulty.name} | ${gameState.gameMode === 'endless' ? '無盡模式' : '回合模式'}</p>
                     </div>
                     <div class="text-right w-1/3">
-                        <p class="text-xs text-red-400 font-bold mb-1 uppercase">Boss Morale (士氣)</p>
-                        <div class="w-full h-3 bg-gray-700 rounded-full overflow-hidden relative">
-                            <div id="boss-morale-bar-fill" class="h-full bg-red-500 w-full transition-all duration-500"></div>
+                        <p class="text-xs text-rose-400 font-bold mb-1 uppercase tracking-wider">魔王士氣 (HP)</p>
+                        <div class="w-full h-4 bg-slate-800 rounded-full overflow-hidden relative border border-slate-700 shadow-inner">
+                            <div id="boss-morale-bar-fill" class="h-full bg-gradient-to-r from-rose-600 to-rose-400 w-full transition-all duration-500 shadow-[0_0_10px_#f43f5e]"></div>
                         </div>
-                        <p id="morale-value" class="text-xs text-red-300 mt-1 font-mono">100%</p>
+                        <p id="morale-value" class="text-sm text-rose-300 mt-1 font-mono font-bold">100%</p>
                     </div>
                 </div>
 
-                <div class="flex flex-col md:flex-row gap-6 h-[500px]">
-                    <!-- Boss Profile & Logic Notes (Updated) -->
+                <div class="flex flex-col md:flex-row gap-6 h-[600px] fade-in-up" style="animation-delay: 0.1s">
+                    <!-- Boss Profile & Logic Notes -->
                     <div class="md:w-1/3 flex flex-col space-y-4">
-                        <div class="card p-6 text-center border-t-4 border-red-500 h-fit">
-                            <div class="text-8xl mb-4 emoji-icon animate-pulse">${boss.icon}</div>
-                            <h3 class="text-2xl font-bold text-white">${boss.name}</h3>
-                            <p class="text-red-400 font-medium text-sm mb-4">${boss.job} (${boss.age}歲) | ${boss.stance}</p>
+                        <div class="card p-6 text-center border-t-4 border-rose-500 h-fit bg-slate-900/60 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-full h-full bg-rose-500/5 pointer-events-none"></div>
+                            <div class="text-8xl mb-4 emoji-icon animate-pulse drop-shadow-xl">${boss.icon}</div>
+                            <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">${boss.name}</h3>
+                            <p class="text-rose-400 font-medium text-sm mb-4 bg-rose-500/10 inline-block px-3 py-1 rounded-full border border-rose-500/20">${boss.job} | ${boss.stance}</p>
                         </div>
                         
-                        <!-- NEW: Logic Notes/Glossary Section -->
-                        <div class="card p-4 flex-grow border-t-4 border-yellow-500 overflow-y-auto bg-gray-800/50">
-                            <h4 class="text-lg font-bold text-yellow-400 mb-3 flex items-center border-b border-gray-700 pb-2">
-                                <span class="mr-2">📝</span> 邏輯筆記與紀錄
+                        <!-- Logic Notes -->
+                        <div class="card p-5 flex-grow border-t-4 border-amber-500 overflow-y-auto bg-slate-900/50 shadow-inner">
+                            <h4 class="text-lg font-bold text-amber-400 mb-4 flex items-center border-b border-white/10 pb-3">
+                                <span class="mr-2 text-xl">📝</span> 戰鬥日誌
                             </h4>
-                            <div id="logic-notes" class="space-y-3 text-sm text-gray-300">
-                                <p class="text-xs text-gray-500 italic">--- 謬誤紀錄 ---</p>
-                                <div id="fallacy-log" class="space-y-1">
-                                    <!-- Fallacies will be logged here -->
+                            <div id="logic-notes" class="space-y-4 text-sm text-slate-300">
+                                <div>
+                                    <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">--- 偵測到的謬誤 ---</p>
+                                    <div id="fallacy-log" class="space-y-2"></div>
                                 </div>
-                                <p class="text-xs text-gray-500 italic pt-2 border-t border-gray-700">--- 專有名詞 ---</p>
-                                <div id="glossary-display" class="flex flex-wrap gap-2">
-                                    ${Object.keys(gameState.glossary).map(term => 
-                                        `<span id="term-${term}" class="glossary-term bg-yellow-800/50 text-yellow-300 text-xs px-3 py-1 rounded-full border border-yellow-700" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`
-                                    ).join('')}
+                                <div>
+                                    <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2 pt-2 border-t border-white/5">--- 關鍵詞彙 ---</p>
+                                    <div id="glossary-display" class="flex flex-wrap gap-2">
+                                        ${Object.keys(gameState.glossary).map(term => 
+                                            `<span id="term-${term}" class="glossary-term" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`
+                                        ).join('')}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1425,21 +1653,21 @@
 
                     <!-- Battle Log & Input -->
                     <div class="md:w-2/3 flex flex-col h-full">
-                        <div id="debate-log" class="flex-grow bg-black/20 border border-gray-700/50 p-5 rounded-2xl overflow-y-auto mb-4 space-y-4 scroll-smooth">
+                        <div id="debate-log" class="flex-grow bg-black/20 border border-slate-700/50 p-6 rounded-2xl overflow-y-auto mb-4 space-y-6 scroll-smooth shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]">
                             <!-- Logs -->
                         </div>
                         
-                        <div class="relative shrink-0">
-                            <textarea id="debate-input" rows="3" class="w-full p-4 bg-gray-800 border border-gray-600 rounded-xl text-white focus:border-indigo-500 transition shadow-inner" placeholder="用事實與邏輯反擊..."></textarea>
+                        <div class="relative shrink-0 card p-4 bg-slate-800/80 border-t border-white/10 shadow-2xl">
+                            <textarea id="debate-input" rows="3" class="w-full p-4 text-lg" placeholder="> 輸入邏輯反擊..."></textarea>
                             
-                            <div class="flex gap-3 mt-3">
-                                <button id="surrender-btn" class="px-4 py-3 rounded-xl font-bold text-sm bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-500 transition whitespace-nowrap">
-                                    🏳️ 我放棄
+                            <div class="flex gap-3 mt-4">
+                                <button id="surrender-btn" class="px-5 py-3 rounded-xl font-bold text-sm bg-slate-700/50 border border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-white transition whitespace-nowrap">
+                                    🏳️ 投降
                                 </button>
-                                <button id="hint-btn" class="flex-1 py-3 rounded-xl font-bold text-sm bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 border border-yellow-600/50 transition">
+                                <button id="hint-btn" class="flex-1 py-3 rounded-xl font-bold text-sm bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition shadow-[0_0_10px_rgba(251,191,36,0.1)]">
                                     💡 索取提示
                                 </button>
-                                <button id="send-btn" class="flex-[2] soft-btn-secondary py-3 rounded-xl font-bold tracking-widest disabled:opacity-50">
+                                <button id="send-btn" class="flex-[2] soft-btn-secondary btn-base py-3 font-bold tracking-widest shadow-lg disabled:opacity-50">
                                     發送反擊
                                 </button>
                             </div>
@@ -1447,7 +1675,7 @@
                     </div>
                 </div>
             `;
-            stages[4].innerHTML = html;
+            stages[5].innerHTML = html;
 
             gameState.debateHistory.push({speaker:'Boss', text:boss.initialComment});
             addLog('Boss', boss.initialComment, boss.icon);
@@ -1472,14 +1700,15 @@
 
             surrenderBtn.addEventListener('click', async () => {
                 displayModal('確認投降', 
-                    `<p>確定要放棄辯論嗎？</p><p class="text-red-400 font-bold">一旦投降，酸民將會宣稱勝利，並嚴重影響您的最終評分。</p>`,
+                    `<p class="text-xl font-bold text-white mb-2">確定要放棄辯論嗎？</p>
+                     <p class="text-rose-400">酸民將獲得勝利，而真相將被掩蓋。</p>`,
                     `
-                    <button class="soft-btn-danger px-4 py-2 rounded-lg" onclick="
+                    <button class="soft-btn-danger btn-base px-6 py-3 shadow-lg" onclick="
                         gameState.isSurrender = true; 
                         document.getElementById('modal-container').innerHTML = ''; 
                         finishBattle();
-                    ">確定放棄</button>
-                    <button class="bg-gray-700 text-white px-4 py-2 rounded-lg ml-3" onclick="document.getElementById('modal-container').innerHTML = ''">取消</button>
+                    ">忍痛放棄</button>
+                    <button class="bg-slate-700 text-white px-6 py-3 rounded-xl hover:bg-slate-600" onclick="document.getElementById('modal-container').innerHTML = ''">取消</button>
                     `
                 );
             });
@@ -1500,17 +1729,20 @@
                         if (gameState.glossary[term] !== definition) {
                             gameState.glossary[term] = definition;
                             if (!document.getElementById(`term-${term}`)) {
-                                const termHtml = `<span id="term-${term}" class="glossary-term bg-yellow-800/50 text-yellow-300 text-xs px-3 py-1 rounded-full border border-yellow-700" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`;
+                                const termHtml = `<span id="term-${term}" class="glossary-term" onclick="showGlossaryDefinition('${term.replace(/'/g, "\\'")}')">${term}</span>`;
                                 glossaryDisplay.innerHTML += termHtml;
                             }
                         }
                     }
 
-                    displayModal('戰術提示', `<p class="text-yellow-400 text-lg mb-2 font-bold">建議切入點：</p><p>${parseText(hintRes.hintText)}</p>`);
+                    displayModal('戰術提示', 
+                        `<div class="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                            <p class="text-amber-400 text-lg mb-2 font-bold flex items-center"><span class="text-2xl mr-2">💡</span>建議策略</p>
+                            <p class="text-white leading-relaxed">${parseText(hintRes.hintText)}</p>
+                        </div>`);
 
                 } catch(e) { 
-                    console.error(e); 
-                    displayModal('提示失敗', `<p class="text-red-400">無法取得提示。AI 連線可能中斷。</p>`);
+                    displayError(e.message);
                 } finally {
                     hintBtn.disabled = false;
                     hintBtn.innerHTML = '💡 索取提示';
@@ -1536,7 +1768,19 @@
                      return;
                 }
 
-                const prompt = `酸民回應：${JSON.stringify(gameState.debateHistory)}。玩家最新：${txt}。堅持誤讀，情緒化。請根據玩家反駁的有效性給予 moraleChange (負數代表酸民受傷，正數代表酸民得意)。同時，請指明酸民本次回應中使用的「邏輯謬誤」名稱，例如: 稻草人謬誤。`;
+                // --- MODIFIED PROMPT FOR DIFFICULTY ---
+                let difficultyInstruction = "";
+                if (gameState.difficulty === 'EASY') {
+                    // Specific instruction for Easy mode: weak logic, poor speech, hard to talk back
+                    difficultyInstruction = "你是『鍵盤小屁孩』。邏輯極差，詞彙量少，只會用髒話或重複的話語來回嘴。如果玩家的反擊有理，你應該表現出惱羞成怒但又說不出個所以然的樣子，或者直接語塞、跳針，很難有力地反擊。請表現出『被嘴爆』的感覺。";
+                } else if (gameState.difficulty === 'HARD') {
+                    difficultyInstruction = "你是邏輯嚴謹的辯論專家，請嘗試找出玩家論點的漏洞進行反擊。同時，請指明酸民本次回應中使用的「邏輯謬誤」專業名稱，例如: 稻草人謬誤。";
+                } else {
+                    difficultyInstruction = "你是『社群嘴砲王』。有基本邏輯，但容易被情緒帶動。如果玩家說得有道理，你會受到傷害（扣士氣），但嘴巴還是很硬。請表現出一般網民吵架的樣子。同時，請在 'logicalFallacy' 欄位中，用簡單白話文指出對方邏輯上的盲點或錯誤，**不要**使用專業的謬誤術語。";
+                }
+
+                const prompt = `酸民回應：${JSON.stringify(gameState.debateHistory)}。玩家最新：${txt}。堅持誤讀，情緒化。請根據玩家反駁的有效性給予 moraleChange (負數代表酸民受傷，正數代表酸民得意)。${difficultyInstruction}`;
+                
                 try {
                     const bossRes = await apiCall(createPayload(prompt, bossResponseSchema));
                     
@@ -1558,9 +1802,9 @@
                     if (bossRes.logicalFallacy && !loggedFallacies.includes(bossRes.logicalFallacy)) {
                         loggedFallacies.push(bossRes.logicalFallacy);
                         fallacyLog.innerHTML += `
-                            <div class="flex items-start text-xs text-red-300">
-                                <span class="text-red-500 mr-2 shrink-0 mt-1">🚨</span> 
-                                <span class="font-bold">${bossRes.logicalFallacy}:</span> ${boss.name} 又犯錯了!
+                            <div class="flex items-start text-xs text-rose-300 font-bold bg-rose-500/10 p-2 rounded border border-rose-500/20">
+                                <span class="text-rose-500 mr-2 shrink-0">🚨</span> 
+                                <span>偵測到: ${bossRes.logicalFallacy}</span>
                             </div>
                         `;
                         fallacyLog.scrollTop = fallacyLog.scrollHeight;
@@ -1572,11 +1816,11 @@
                     
                     const moraleContainer = document.getElementById('boss-morale-bar-fill').parentElement;
                     if(change < 0) {
-                        moraleContainer.classList.add('ring-2', 'ring-emerald-400');
-                        setTimeout(() => moraleContainer.classList.remove('ring-2', 'ring-emerald-400'), 500);
+                        moraleContainer.classList.add('ring-2', 'ring-emerald-500', 'shadow-[0_0_15px_#10b981]');
+                        setTimeout(() => moraleContainer.classList.remove('ring-2', 'ring-emerald-500', 'shadow-[0_0_15px_#10b981]'), 500);
                     } else {
-                        moraleContainer.classList.add('ring-2', 'ring-red-600');
-                        setTimeout(() => moraleContainer.classList.remove('ring-2', 'ring-red-600'), 500);
+                        moraleContainer.classList.add('ring-2', 'ring-rose-500', 'shadow-[0_0_15px_#f43f5e]');
+                        setTimeout(() => moraleContainer.classList.remove('ring-2', 'ring-rose-500', 'shadow-[0_0_15px_#f43f5e]'), 500);
                     }
 
                     if (gameState.bossMorale <= 0) {
@@ -1597,33 +1841,35 @@
         }
 
         async function finishBattle() {
-            toggleLoading(true, '裁判最終判決中...');
+            toggleLoading(true, '生成最終報告...');
             
             const difficulty = DIFFICULTY_SETTINGS[gameState.difficulty];
             let context = `玩家是否投降: ${gameState.isSurrender}。酸民剩餘士氣: ${gameState.bossMorale}。遊戲模式: ${gameState.gameMode}。玩家 F/O/J 階段得分: ${gameState.fojScore}。`;
             let isRoundWin = false;
             
-            if (gameState.gameMode === 'rounds' && gameState.bossMorale > 0) {
-                const totalMoraleLost = 100 - gameState.bossMorale;
-                const requiredMoraleLoss = 100 * difficulty.winThreshold;
-                if (totalMoraleLost >= requiredMoraleLoss) {
-                    isRoundWin = true;
-                    context += ` 玩家在回合模式中成功削弱 ${totalMoraleLost}% 士氣，達到門檻 ${requiredMoraleLoss}%，判定為戰術性勝利。`;
-                } else {
-                    context += ` 玩家在回合模式中僅削弱 ${totalMoraleLost}% 士氣，未達門檻 ${requiredMoraleLoss}%，判定為失敗。`;
-                }
-            }
-
-            if (gameState.isSurrender) context += " 玩家主動放棄，酸民獲得勝利。";
-            else if (gameState.bossMorale <= 0) context += " 酸民士氣崩潰，玩家獲得壓倒性勝利。";
-            else if (isRoundWin) context += " 玩家獲得戰術性勝利。";
+            let resultType = "NORMAL";
             
-            const prompt = `評審辯論歷史：${JSON.stringify(gameState.debateHistory)}。情境背景：${context}。請針對玩家表現，提供3個具體的「辯論優化建議」(debateSuggestions)。**重要：最終邏輯分數(logicScore)必須綜合考慮玩家在 F/O 階段的得分(max 100)與魔王戰的表現(士氣扣減多寡)來計算，使達成勝利條件的玩家能獲得更高的分數 (例如: > 80)。**`;
+            if (gameState.isSurrender) {
+                context += " 玩家主動放棄，酸民獲得勝利。";
+                resultType = "SURRENDER";
+            } else if (gameState.bossMorale <= 0) {
+                context += " 酸民士氣崩潰，玩家獲得壓倒性勝利。";
+                resultType = "KO";
+            } else if (gameState.gameMode === 'rounds') {
+                 context += " 回合結束。請根據玩家表現給予評分與建議。";
+                 resultType = "ROUNDS_END";
+            }
+            
+            const prompt = `評審辯論歷史：${JSON.stringify(gameState.debateHistory)}。情境背景：${context}。
+請針對玩家表現，提供3個具體的「辯論優化建議」(debateSuggestions)。
+**重要：最終邏輯分數(logicScore)必須綜合考慮玩家在 F/O 階段的得分(max 100)與魔王戰的表現(士氣扣減多寡)來計算。**
+如果是在戰術回合制中結束，請不要判定為失敗，而是給予一個客觀的溝通效能評分。`;
+
             try {
                 const evalRes = await apiCall(createPayload(prompt, evaluationSchema));
                 gameState.evaluation = evalRes;
-                renderStage5(); 
-                showStage(5);
+                renderStage6(resultType); 
+                showStage(6);
             } catch(e) {
                 displayError(e.message);
             } finally {
@@ -1637,11 +1883,11 @@
             const parsedText = parseText(text);
             
             const html = `
-                <div class="flex ${isUser ? 'justify-end log-entry-user' : 'justify-start log-entry-boss'}">
-                    <div class="${isUser ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'} p-4 rounded-2xl max-w-[85%] shadow-md relative group">
-                        <div class="absolute -top-3 ${isUser ? '-right-2' : '-left-2'} text-2xl drop-shadow-md group-hover:scale-110 transition-transform">${icon}</div>
-                        <p class="text-sm leading-relaxed">${parsedText}</p>
-                        ${status ? `<p class="text-xs text-yellow-300/80 mt-2 font-mono border-t border-white/10 pt-1">STATUS: ${status}</p>` : ''}
+                <div class="flex ${isUser ? 'justify-end log-entry-user' : 'justify-start log-entry-boss'} mb-6">
+                    <div class="dialog-bubble p-5 max-w-[85%] relative group ${isUser ? 'bg-indigo-900/30 border-indigo-500/30' : 'bg-slate-800/60'}">
+                        <div class="absolute -top-4 ${isUser ? '-right-3' : '-left-3'} text-3xl drop-shadow-lg group-hover:scale-110 transition-transform">${icon}</div>
+                        <p class="text-base leading-relaxed font-sans text-slate-200">${parsedText}</p>
+                        ${status ? `<p class="text-xs text-amber-400 mt-3 font-mono border-t border-white/10 pt-2 uppercase font-bold flex items-center"><span class="w-1.5 h-1.5 bg-amber-400 rounded-full mr-2 animate-pulse"></span>狀態: ${status}</p>` : ''}
                     </div>
                 </div>
             `;
@@ -1650,79 +1896,88 @@
         }
 
         // ----------------------------------------------------
-        // 11. Stage 5: Evaluation
+        // 12. Stage 6: Evaluation (Renamed from Stage 5)
         // ----------------------------------------------------
-        function renderStage5() {
-            const { persuasionSuccess, finalBossVerdict, logicScore, debateCritique, debateSuggestions } = gameState.evaluation;
+        function renderStage6(resultType) {
+            const { logicScore, debateCritique, debateSuggestions, finalBossVerdict } = gameState.evaluation;
             const boss = gameState.bossCharacter;
             
-            const difficulty = DIFFICULTY_SETTINGS[gameState.difficulty];
-            let realSuccess = (gameState.bossMorale <= 0); 
+            // --- Determine Display Title ---
+            let resultTitle = '';
+            let resultIcon = '';
+            let titleColor = '';
             
-            if (gameState.gameMode === 'rounds' && gameState.bossMorale > 0) {
-                const totalMoraleLost = 100 - gameState.bossMorale;
-                const requiredMoraleLoss = 100 * difficulty.winThreshold;
-                if (totalMoraleLost >= requiredMoraleLoss) {
-                    realSuccess = true; 
-                }
+            if (resultType === 'SURRENDER') {
+                resultTitle = '任務中止';
+                resultIcon = '🏳️';
+                titleColor = 'text-slate-500';
+                playFailureSFX();
+            } else if (resultType === 'KO') {
+                resultTitle = '完全勝利';
+                resultIcon = '🏆';
+                titleColor = 'text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.6)]';
+                playSuccessSFX();
+            } else { // ROUNDS_END
+                resultTitle = '回合結束';
+                resultIcon = '⏱️';
+                titleColor = 'text-indigo-400 drop-shadow-[0_0_15px_rgba(99,102,241,0.6)]';
+                playSuccessSFX();
             }
-            
-            const realFail = gameState.isSurrender || (!realSuccess);
-
-            if(!realFail) playSuccessSFX(); else playFailureSFX();
-
-            let resultTitle = realFail ? '挑戰失敗' : '辯論勝利！';
-            if (gameState.isSurrender) resultTitle = '戰術撤退 (投降)';
-            let resultIcon = realFail ? '💀' : '🏆';
 
             let html = `
-                <div class="card p-10 text-center border-t-8 ${!realFail ? 'border-emerald-500' : 'border-red-500'} stage-transition">
-                    <div class="mb-6">
-                        <span class="text-6xl filter drop-shadow-xl">${resultIcon}</span>
+                <div class="card p-12 text-center border-t-8 border-slate-600 fade-in-up shadow-2xl">
+                    <div class="mb-8">
+                        <span class="text-8xl filter drop-shadow-2xl animate-bounce">${resultIcon}</span>
                     </div>
-                    <h1 class="text-4xl font-black mb-2 ${!realFail ? 'text-emerald-400' : 'text-red-500'} tracking-tight">
+                    <h1 class="text-5xl font-black mb-2 ${titleColor} tracking-tight uppercase">
                         ${resultTitle}
                     </h1>
-                    <p class="text-gray-400 font-medium tracking-widest mb-10 uppercase">Final Evaluation Report</p>
+                    <p class="text-slate-400 font-bold tracking-[0.2em] mb-12 uppercase text-sm">Final Evaluation Report</p>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                        <div class="bg-gray-800/50 p-6 rounded-2xl border border-yellow-500/30">
-                            <h3 class="text-yellow-400 font-bold mb-3 flex items-center">
-                                <span class="mr-2">📊</span> 邏輯分數 (Logic Score)
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                        <div class="bg-amber-900/10 p-8 border border-amber-600/30 rounded-3xl relative overflow-hidden group">
+                            <div class="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <h3 class="text-amber-400 font-bold mb-4 flex items-center uppercase text-sm tracking-wider">
+                                <span class="w-2 h-2 bg-amber-400 rounded-full mr-3"></span>邏輯評分
                             </h3>
-                            <div class="text-6xl font-black text-white mb-3 tracking-tighter">${logicScore}<span class="text-xl text-gray-500 font-normal ml-2">/100</span></div>
-                            <p class="text-sm text-gray-300 leading-relaxed">${parseText(debateCritique)}</p>
-                            <p class="text-xs text-gray-500 mt-2">F/O 階段貢獻： ${gameState.fojScore} 分</p>
+                            <div class="text-7xl font-black text-white mb-4 tracking-tighter drop-shadow-lg">${logicScore}<span class="text-2xl text-slate-500 font-normal ml-2">/100</span></div>
+                            <p class="text-sm text-slate-300 leading-relaxed">${parseText(debateCritique)}</p>
+                            <p class="text-xs text-slate-500 mt-4 pt-4 border-t border-white/10 font-mono">Phase 1 Bonus: +${gameState.fojScore}</p>
                         </div>
                         
-                        <div class="bg-gray-800/50 p-6 rounded-2xl border border-purple-500/30">
-                            <h3 class="text-purple-400 font-bold mb-3 flex items-center">
-                                <span class="mr-2">👾</span> 對手狀態 (Target Status)
+                        <div class="bg-indigo-900/10 p-8 border border-indigo-600/30 rounded-3xl relative overflow-hidden group">
+                            <div class="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <h3 class="text-indigo-400 font-bold mb-4 flex items-center uppercase text-sm tracking-wider">
+                                <span class="w-2 h-2 bg-indigo-400 rounded-full mr-3"></span>對手狀態
                             </h3>
-                            <div class="flex items-center mb-4 bg-black/20 p-3 rounded-xl">
-                                <span class="text-4xl mr-3 emoji-icon">${boss.icon}</span>
-                                <span class="text-white font-bold text-lg">${boss.name} <span class="text-sm text-gray-400 ml-2">(${boss.age}歲, ${boss.job})</span></span>
+                            <div class="flex items-center mb-6 bg-slate-900/50 p-4 border border-slate-700/50 rounded-2xl">
+                                <span class="text-5xl mr-4 emoji-icon filter drop-shadow-lg">${boss.icon}</span>
+                                <div>
+                                    <span class="text-white font-bold text-xl block">${boss.name}</span>
+                                    <span class="text-sm text-slate-400">${boss.age}歲 / ${boss.job}</span>
+                                </div>
                             </div>
-                            <p class="text-white italic text-sm border-l-2 border-purple-500 pl-3">${parseText(finalBossVerdict)}</p>
-                            <p class="text-xs text-gray-500 mt-2 text-right">難度: ${difficulty.name} | 最終士氣: ${gameState.bossMorale}%</p>
+                            <p class="text-white italic text-sm border-l-2 border-indigo-500 pl-4 mb-4 leading-relaxed opacity-80">"${parseText(finalBossVerdict)}"</p>
+                            <p class="text-xs text-slate-500 mt-auto text-right font-mono uppercase tracking-wider">FINAL MORALE: ${gameState.bossMorale}%</p>
                         </div>
                     </div>
                     
-                    <div class="mt-6 bg-indigo-900/30 p-6 rounded-2xl border border-indigo-500/30 text-left">
-                        <h3 class="text-indigo-400 font-bold mb-3 flex items-center">
-                            <span class="mr-2">💡</span> 辯論優化建議 (Tactical Advice)
+                    <div class="mt-8 bg-emerald-900/10 p-8 border border-emerald-600/30 text-left rounded-3xl relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
+                        <h3 class="text-emerald-400 font-bold mb-4 flex items-center uppercase text-sm tracking-wider">
+                            <span class="text-xl mr-2">💡</span> 戰術建議
                         </h3>
-                        <ul class="list-disc pl-5 space-y-2 text-gray-300 text-sm leading-relaxed">
-                            ${debateSuggestions ? debateSuggestions.map(s => `<li>${parseText(s)}</li>`).join('') : '<li>無具體建議</li>'}
+                        <ul class="list-disc pl-5 space-y-3 text-slate-300 text-sm leading-relaxed">
+                            ${debateSuggestions ? debateSuggestions.map(s => `<li>${parseText(s)}</li>`).join('') : '<li>無資料</li>'}
                         </ul>
                     </div>
 
-                    <button onclick="window.location.reload()" class="mt-10 soft-btn px-10 py-5 text-xl font-bold shadow-xl">
+                    <button onclick="window.location.reload()" class="mt-12 soft-btn btn-base px-12 py-5 text-xl font-bold shadow-2xl hover:scale-105 transform transition">
                         重新啟動系統 (REBOOT)
                     </button>
                 </div>
             `;
-            stages[5].innerHTML = html;
+            stages[6].innerHTML = html;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1730,7 +1985,6 @@
             gameContent = document.getElementById('game-container');
             loadingState = document.getElementById('loading-state');
             errorState = document.getElementById('error-state');
-            errorMessageDetail = document.getElementById('error-message-detail');
             loadingMessage = document.getElementById('loading-message');
             
             stages = {
@@ -1740,7 +1994,23 @@
                 3: document.getElementById('stage-3'), 
                 4: document.getElementById('stage-4'), 
                 5: document.getElementById('stage-5'), 
+                6: document.getElementById('stage-6'),
             };
+            
+            function showIntroModal() {
+                const intro = document.getElementById('intro-modal');
+                intro.classList.remove('hidden');
+                
+                document.getElementById('close-intro-btn').addEventListener('click', () => {
+                    intro.classList.add('hidden');
+                    localStorage.setItem('troll_be_gone_intro_seen_soft_v2', 'true');
+                    playClickSFX();
+                });
+            }
+
+            if (!localStorage.getItem('troll_be_gone_intro_seen_soft_v2')) {
+                showIntroModal();
+            }
 
             // Setup Listeners
             document.getElementById('bgm-toggle').addEventListener('click', () => {
@@ -1751,7 +2021,7 @@
             document.getElementById('instructions-button').addEventListener('click', () => {
                 playClickSFX();
                 displayModal('遊戲說明與目標', 
-                    `<div class="space-y-4">
+                    `<div class="space-y-4 text-left">
                         <div class="bg-gray-700/30 p-3 rounded-xl">
                             <h4 class="text-emerald-400 font-bold mb-1">Step 0: 選擇戰場</h4>
                             <p class="text-sm">選擇一個你感興趣的爭議話題，或輸入一篇貼文。</p>
@@ -1770,13 +2040,27 @@
                         </div>
                         <div class="bg-gray-700/30 p-3 rounded-xl">
                             <h4 class="text-red-400 font-bold mb-1">Step 4: 魔王戰 (鍵盤對峙)</h4>
-                            <p class="text-sm">面對一個「沒看內文就開噴」的酸民。目標是透過<strong class="text-red-400">邏輯反擊</strong>將其士氣降至零。回合模式下，達到難度設定的士氣削弱門檻即可獲勝。</p>
+                            <p class="text-sm">面對一個「沒看內文就開噴」的酸民。目標是透過<strong class="text-red-400">邏輯反擊</strong>將其士氣降至零。回合模式下，專注於溝通效果的評分。</p>
                         </div>
                         <div class="bg-gray-700/30 p-3 rounded-xl">
                             <h4 class="text-purple-400 font-bold mb-1">Step 5: 結算</h4>
                             <p class="text-sm">AI 裁判將綜合 F/O 表現和魔王戰結果，給出你的最終邏輯強度評分。</p>
                         </div>
+                        <div class="mt-4 text-right">
+                             <button id="replay-intro-btn" class="text-xs text-indigo-400 hover:text-indigo-300 underline">重看前情提要</button>
+                        </div>
                     </div>`);
+                    
+                    // Add listener for the replay button inside the modal
+                    setTimeout(() => {
+                         const replayBtn = document.getElementById('replay-intro-btn');
+                         if(replayBtn) {
+                             replayBtn.addEventListener('click', () => {
+                                 document.getElementById('modal-container').innerHTML = ''; // Close current
+                                 showIntroModal(); // Show intro
+                             });
+                         }
+                    }, 100);
             });
 
             if (!apiKey) {
