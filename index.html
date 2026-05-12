@@ -911,6 +911,8 @@
                     
                     // 特別處理 429，允許重試
                     if (response.status === 429) {
+                         const errorData = await response.json();
+                         console.error("429 拒絕連線的詳細原因:", errorData);
                          throw new Error("429"); 
                     }
                     
